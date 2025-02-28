@@ -263,4 +263,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5315e63ad094cbd49bdd10425cc5d793, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  exitsFromRoom: 01010101
+  exitsFromRoom: 01000101
