@@ -1621,7 +1621,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   rooms:
-  - {fileID: 6899835447356147612, guid: 6337a385ea2f04840b6d93df6bc72634, type: 3}
+  - {fileID: 1563745171371136470, guid: 6337a385ea2f04840b6d93df6bc72634, type: 3}
+  - {fileID: 1563745171371136470, guid: 6337a385ea2f04840b6d93df6bc72634, type: 3}
+  - {fileID: 1563745171371136470, guid: 6337a385ea2f04840b6d93df6bc72634, type: 3}
+  - {fileID: 1563745171371136470, guid: 6337a385ea2f04840b6d93df6bc72634, type: 3}
   startPosition: {x: 0, y: 0, z: 0}
 --- !u!4 &1026981675
 Transform:
@@ -3090,87 +3093,6 @@ PrefabInstance:
       addedObject: {fileID: 428937391}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: e6f631f77a7756d4fa49b1f543953b0f, type: 3}
---- !u!1001 &7340651952512429634
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 5506986277185486054, guid: 6337a385ea2f04840b6d93df6bc72634, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5506986277185486054, guid: 6337a385ea2f04840b6d93df6bc72634, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5506986277185486054, guid: 6337a385ea2f04840b6d93df6bc72634, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5506986277185486054, guid: 6337a385ea2f04840b6d93df6bc72634, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 5506986277185486054, guid: 6337a385ea2f04840b6d93df6bc72634, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5506986277185486054, guid: 6337a385ea2f04840b6d93df6bc72634, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5506986277185486054, guid: 6337a385ea2f04840b6d93df6bc72634, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5506986277185486054, guid: 6337a385ea2f04840b6d93df6bc72634, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5506986277185486054, guid: 6337a385ea2f04840b6d93df6bc72634, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5506986277185486054, guid: 6337a385ea2f04840b6d93df6bc72634, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6899835447356147612, guid: 6337a385ea2f04840b6d93df6bc72634, type: 3}
-      propertyPath: m_Name
-      value: TestRoom
-      objectReference: {fileID: 0}
-    - target: {fileID: 6899835447356147612, guid: 6337a385ea2f04840b6d93df6bc72634, type: 3}
-      propertyPath: m_IsActive
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8696731729683594008, guid: 6337a385ea2f04840b6d93df6bc72634, type: 3}
-      propertyPath: m_Enabled
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 8696731729683594008, guid: 6337a385ea2f04840b6d93df6bc72634, type: 3}
-      propertyPath: 'exitsFromRoom.Array.data[0]'
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 8696731729683594008, guid: 6337a385ea2f04840b6d93df6bc72634, type: 3}
-      propertyPath: 'exitsFromRoom.Array.data[1]'
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 8696731729683594008, guid: 6337a385ea2f04840b6d93df6bc72634, type: 3}
-      propertyPath: 'exitsFromRoom.Array.data[2]'
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 8696731729683594008, guid: 6337a385ea2f04840b6d93df6bc72634, type: 3}
-      propertyPath: 'exitsFromRoom.Array.data[3]'
-      value: 1
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 6337a385ea2f04840b6d93df6bc72634, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -3189,4 +3111,3 @@ SceneRoots:
   - {fileID: 168739548}
   - {fileID: 1008991914}
   - {fileID: 1026981675}
-  - {fileID: 7340651952512429634}

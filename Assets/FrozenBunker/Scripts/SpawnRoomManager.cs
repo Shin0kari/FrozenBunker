@@ -1,28 +1,35 @@
 using UnityEngine;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 
 public class SpawnRoomManager : MonoBehaviour
 {
     [SerializeField] private GameObject[] rooms;
     [SerializeField] private Vector3 startPosition = new Vector3(0, 0, -12);
-    private bool[] existFromRoom = new bool[4];
-    // private HashSet<Vector2> occupiedPositions = new HashSet<Vector2>();
     private Dictionary<Vector2, GameObject> roomsWorldPositions = new Dictionary<Vector2, GameObject>();
-
 
     void Start()
     {
+        // Возможно баг в том, что в списке одинаковые prefab - это один и тот же room. И меняя ExitsFromRoom у одного prefab, меняется и у другого. !!!!!!!!!!!!!!!
         GameObject room = SpawnStartRoom();
-        CheckNumAvailableExits(room);
         SpawnAdjacentRooms(room);
     }
 
     private GameObject SpawnStartRoom() {
         int randomIndex = Random.Range(0, rooms.Length);
         
-        Vector2 startWorldPos = new Vector2(0, 0);
-        Quaternion randomDirection = SetRandomDirection();
-        GameObject room = SpawnRoom(randomIndex, rooms, startPosition, randomDirection, startWorldPos);
+        Vector2 start2DWorldPos = new Vector2(0, 0);
+
+        int newDirection = Random.Range(0, 3);
+        Quaternion newRotation = Quaternion.Euler(0, newDirection * 90, 0);
+        Debug.Log("Start_Dir: " + newDirection);
+
+        // Quaternion randomDirection = SetRandomDirection();
+        GameObject room = SpawnRoom(randomIndex, rooms, startPosition, newRotation, start2DWorldPos);
+        bool[] startExitsFromRoom = CheckNumAvailableExits(room);
+        Debug.Log("StartExists: \n" + startExitsFromRoom[0] + ", " + startExitsFromRoom[1] + ", " + startExitsFromRoom[2] + "," + startExitsFromRoom[3]);
+        ChangeExistFromRoom(newDirection, startExitsFromRoom);
+        Debug.Log("StartExistsWithNewDir: \n" + startExitsFromRoom[0] + ", " + startExitsFromRoom[1] + ", " + startExitsFromRoom[2] + "," + startExitsFromRoom[3]);
         return room;
     }
 
@@ -34,14 +41,14 @@ public class SpawnRoomManager : MonoBehaviour
     /// <param name="rotation"></param>
     /// <param name="newPos"></param>
     /// <returns></returns>
-    private GameObject SpawnRoom(int randomIndex, GameObject[] rooms, Vector3 pos, Quaternion rotation, Vector2 newPos) {
-        if (roomsWorldPositions.ContainsKey(newPos)) {
+    private GameObject SpawnRoom(int randomIndex, GameObject[] rooms, Vector3 worldPos, Quaternion rotation, Vector2 new2DPos) {
+        if (roomsWorldPositions.ContainsKey(new2DPos)) {
             return null; // Если позиция уже занята, не создаем новую комнату
         }
 
-        GameObject room = Instantiate(rooms[randomIndex], pos, rotation);
-        room.GetComponent<RoomManager>().WorldPos = newPos;
-        roomsWorldPositions.Add(newPos, room); // Добавляем новую позицию в HashSet
+        GameObject room = Instantiate(rooms[randomIndex], worldPos, rotation);
+        room.GetComponent<RoomManager>().WorldPos = new2DPos;
+        roomsWorldPositions.Add(new2DPos, room); // Добавляем новую позицию в HashSet
         return room;
     }
 
@@ -49,8 +56,8 @@ public class SpawnRoomManager : MonoBehaviour
     /// Переносит выходы из скрипта RoomManager (Room Data) в SpawnRoomManager.
     /// </summary>
     /// <param name="room"></param>
-    private void CheckNumAvailableExits(GameObject room) {
-        existFromRoom = room.GetComponent<RoomManager>().exitsFromRoom;
+    private bool[] CheckNumAvailableExits(GameObject room) {
+        return room.GetComponent<RoomManager>().exitsFromRoom;
     }
 
     /// <summary>
@@ -60,49 +67,74 @@ public class SpawnRoomManager : MonoBehaviour
     /// </summary>
     /// <param name="room"></param>
     private void SpawnAdjacentRooms(GameObject room) {
+        RoomManager roomManager = room.GetComponent<RoomManager>();
+        bool[] existFromRoom = roomManager.exitsFromRoom;
+        Debug.Log("ExistsInAdjacent: 0 - \n" + existFromRoom[0] + ", 1 - " + existFromRoom[1] + ", 2 - " + existFromRoom[2] + ", 3 - " + existFromRoom[3]);
         for (int i = 0; i < existFromRoom.Length; i++) {
+            Debug.Log("I: " + i + "; ExistsInAdjacent - " + existFromRoom[i]);
             // i = 0 -> north, 1 -> east, 2 -> south, 3 -> west
             if (!existFromRoom[i]) {
+                Debug.Log("I to continue: " + i);
                 continue;
             }
 
             Quaternion newRotation;
             Vector3 newPosition;
-            Vector2 newWorldPos;
+            Vector2 new2DWorldPos;
 
             switch (i) {
                 case 0: // north
                     newPosition = room.transform.position + new Vector3(25, 0, 0);
-                    // newRotation = room.transform.rotation * Quaternion.Euler(0, 0, 0);
-                    newWorldPos = room.GetComponent<RoomManager>().WorldPos + new Vector2(1, 0);
+                    new2DWorldPos = roomManager.WorldPos + new Vector2(1, 0);
                     break;
                 case 1: // east
                     newPosition = room.transform.position + new Vector3(0, 0, -25);
-                    // newRotation = room.transform.rotation * Quaternion.Euler(0, 90, 0);
-                    newWorldPos = room.GetComponent<RoomManager>().WorldPos + new Vector2(0, -1);
+                    new2DWorldPos = roomManager.WorldPos + new Vector2(0, -1);
                     break;
                 case 2: // south
                     newPosition = room.transform.position + new Vector3(-25, 0, 0);
-                    // newRotation = room.transform.rotation * Quaternion.Euler(0, 180, 0);
-                    newWorldPos = room.GetComponent<RoomManager>().WorldPos + new Vector2(-1, 0);
+                    new2DWorldPos = roomManager.WorldPos + new Vector2(-1, 0);
                     break;
                 case 3: // west
                     newPosition = room.transform.position + new Vector3(0, 0, 25);
-                    // newRotation = room.transform.rotation * Quaternion.Euler(0, 270, 0);
-                    newWorldPos = room.GetComponent<RoomManager>().WorldPos + new Vector2(0, 1);
+                    new2DWorldPos = roomManager.WorldPos + new Vector2(0, 1);
                     break;
                 default:
                     return;
             }
 
-            GameObject[] availableRooms = DetermineListAvailableRooms(rooms, newWorldPos);
+            int[] requiredRoomType = CheckRequiredRoomType(new2DWorldPos);
+            GameObject[] availableRooms = DetermineListAvailableRooms(rooms, requiredRoomType);
             int randomIndex = Random.Range(0, availableRooms.Length);
 
-            newRotation = GetRotationForRoom(availableRooms[randomIndex]);
-            // newRotation = room.transform.rotation;
-            // Изменить код ниже, так как планируется убрать повороты комнаты !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            ChangeExistFromRoom(i);
-            SpawnRoom(randomIndex, availableRooms, newPosition, newRotation, newWorldPos);
+            int newDirection = GetDirectionForRoom(availableRooms[randomIndex], requiredRoomType);
+            newRotation = Quaternion.Euler(0, newDirection * 90, 0);
+            
+            GameObject newRoom = SpawnRoom(randomIndex, availableRooms, newPosition, newRotation, new2DWorldPos);
+            bool[] newRoomExitsFromRoom = newRoom.GetComponent<RoomManager>().exitsFromRoom;
+            ChangeExistFromRoom(newDirection, newRoomExitsFromRoom);
+        }
+    }
+
+    private int GetDirectionForRoom(GameObject room, int[] requiredRoomType) {
+        List<int> possibleRotations = new List<int>();
+        bool[] exitsFromRoom = room.GetComponent<RoomManager>().exitsFromRoom;
+        bool isMatch;
+
+        for (int rotation = 0; rotation < 4; rotation++) {
+            isMatch = CheckIsMatchForDetermineAvailableDirection(exitsFromRoom, rotation, requiredRoomType);
+
+            if (isMatch) {
+                possibleRotations.Add(rotation);
+            }
+        }
+
+        if (possibleRotations.Count > 0) {
+            int randomIndex = Random.Range(0, possibleRotations.Count - 1);
+            Debug.Log("Rotation: " + possibleRotations[randomIndex]);
+            return possibleRotations[randomIndex];
+        } else {
+            return 0; // Возвращаем без поворота, если нет подходящих поворотов
         }
     }
 
@@ -110,37 +142,44 @@ public class SpawnRoomManager : MonoBehaviour
     /// Эта функция делает так, что при повороте комнаты existFromRoom останется мировым а не локальным.
     /// </summary>
     /// <param name="direct"></param>
-    private void ChangeExistFromRoom(int direct) {
+    private void ChangeExistFromRoom(int direct, bool[] existFromRoom) {
         bool presenceNorthDoor;
         bool presenceEastDoor;
         bool presenceSouthDoor;
         bool presenceWestDoor;
         switch (direct) {
             case 0: // north
-                break;
-            case 1: // east
+                return;
+            case 1: // rotate north direct prefab to east
                 presenceNorthDoor = existFromRoom[0];
-                existFromRoom[0] = existFromRoom[1];
-                existFromRoom[1] = existFromRoom[2];
-                existFromRoom[2] = existFromRoom[3];
-                existFromRoom[3] = presenceNorthDoor;
+                presenceEastDoor = existFromRoom[1];
+                presenceSouthDoor = existFromRoom[2];
+                presenceWestDoor = existFromRoom[3];
+                existFromRoom[0] = presenceWestDoor;
+                existFromRoom[1] = presenceNorthDoor;
+                existFromRoom[2] = presenceEastDoor;
+                existFromRoom[3] = presenceSouthDoor;
                 break;
-            case 2: // south
+            case 2: // rotate north direct prefab to south
+                presenceNorthDoor = existFromRoom[0];
+                presenceEastDoor = existFromRoom[1];
                 presenceSouthDoor = existFromRoom[2];
                 presenceWestDoor = existFromRoom[3];
                 existFromRoom[0] = presenceSouthDoor;
                 existFromRoom[1] = presenceWestDoor;
-                existFromRoom[2] = existFromRoom[0];
-                existFromRoom[3] = existFromRoom[1];
+                existFromRoom[2] = presenceNorthDoor;
+                existFromRoom[3] = presenceEastDoor;
                 break;
-            case 3: // west
+            case 3: // rotate north direct prefab to west
                 presenceNorthDoor = existFromRoom[0];
                 presenceEastDoor = existFromRoom[1];
                 presenceSouthDoor = existFromRoom[2];
-                existFromRoom[0] = existFromRoom[3];
-                existFromRoom[1] = presenceNorthDoor;
-                existFromRoom[2] = presenceEastDoor;
-                existFromRoom[3] = presenceSouthDoor;
+                presenceWestDoor = existFromRoom[3];
+                existFromRoom[0] = presenceEastDoor;
+                existFromRoom[1] = presenceSouthDoor;
+                existFromRoom[2] = presenceWestDoor;
+                existFromRoom[3] = presenceNorthDoor;
+
                 break;
             default:
                 Debug.LogError("Invalid direction");
@@ -153,26 +192,14 @@ public class SpawnRoomManager : MonoBehaviour
     /// </summary>
     /// <param name="rooms"></param>
     /// <returns></returns>
-    private GameObject[] DetermineListAvailableRooms(GameObject[] rooms, Vector2 roomWorldPos) {
+    private GameObject[] DetermineListAvailableRooms(GameObject[] rooms, int[] requiredRoomType) {
         List<GameObject> availableRooms = new List<GameObject>();
-        int[] requiredRoomType = CheckRequiredRoomType(roomWorldPos);
 
         foreach (GameObject room in rooms) {
             bool[] exitsFromRoom = room.GetComponent<RoomManager>().exitsFromRoom;
-            bool isMatch;
 
             for (int rotation = 0; rotation < 4; rotation++) {
-                isMatch = true;
-
-                for (int i = 0; i < 4; i++) {
-                    int required = requiredRoomType[i];
-                    bool exit = exitsFromRoom[(i + rotation) % 4];
-
-                    if ((required == 1 && !exit) || (required == -1 && exit)) {
-                        isMatch = false;
-                        break;
-                    }
-                }
+                bool isMatch = CheckIsMatchForDetermineAvailableDirection(exitsFromRoom, rotation, requiredRoomType);
 
                 if (isMatch) {
                     availableRooms.Add(room);
@@ -182,6 +209,22 @@ public class SpawnRoomManager : MonoBehaviour
         }
 
         return availableRooms.ToArray();
+    }
+
+    private bool CheckIsMatchForDetermineAvailableDirection(bool[] exitsFromRoom, int rotation, int[] requiredRoomType) {
+        bool isMatch = true;
+
+        for (int i = 0; i < 4; i++) {
+            int required = requiredRoomType[i];
+            bool exit = exitsFromRoom[(i + (4 - rotation)) % 4];
+
+            if ((required == 1 && !exit) || (required == -1 && exit)) {
+                isMatch = false;
+                break;
+            }
+        }
+
+        return isMatch;
     }
 
     /*
@@ -239,7 +282,7 @@ public class SpawnRoomManager : MonoBehaviour
     /// <returns></returns>
     private int[] CheckRequiredRoomType(Vector2 roomWorldPos) {
         // 0 - комната не создана; 1 - смежная комната имеет общую дверь с этой комнатой; -1 - смежная комната не имеет общей двери с этой комнатой
-        int[] requiredRoomType = new int[4] {0, 0, 0, 0};
+        int[] requiredRoomType = new int[4];
         for (int i = 0; i < 4; i++) {
             switch (i) {
                 case 0: // north
