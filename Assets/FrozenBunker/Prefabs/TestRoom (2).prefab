@@ -591,3 +591,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   exitsFromRoom: 01010101
+  canUsedInfinitely: 0
+  isUsed: 0
+  canBeUsedAsStartingRoom: 1
+  availableForNextPoolRooms: 01010101010101010101

@@ -264,6 +264,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   exitsFromRoom: 01000100
+  canUsedInfinitely: 0
+  isUsed: 0
+  canBeUsedAsStartingRoom: 1
+  availableForNextPoolRooms: 01010101010101010101
 --- !u!1 &8053228674742563476
 GameObject:
   m_ObjectHideFlags: 0

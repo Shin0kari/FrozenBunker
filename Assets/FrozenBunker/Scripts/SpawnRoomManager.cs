@@ -1,35 +1,34 @@
 using UnityEngine;
 using System.Collections.Generic;
-using Unity.VisualScripting;
 
 public class SpawnRoomManager : MonoBehaviour
 {
-    [SerializeField] private GameObject[] rooms;
-    [SerializeField] private Vector3 startPosition = new Vector3(0, 0, -12);
-    private Dictionary<Vector2, GameObject> roomsWorldPositions = new Dictionary<Vector2, GameObject>();
+    private List<GameObject> rooms;
+    [SerializeField] private int numOfZones = 10;
+    [SerializeField] private Vector3 startPosition = new(0, 0, -12);
+    private readonly Dictionary<Vector2, GameObject> roomsWorldPositions = new();
 
     void Start()
     {
-        // Возможно баг в том, что в списке одинаковые prefab - это один и тот же room. И меняя ExitsFromRoom у одного prefab, меняется и у другого. !!!!!!!!!!!!!!!
-        GameObject room = SpawnStartRoom();
+        int startIndexZone = GetStartingIndexZone();
+        rooms = GetComponent<RoomsPool>().GetPoolRooms(startIndexZone);
+
+        GameObject room = SpawnStartRoom(rooms);
         SpawnAdjacentRooms(room);
     }
 
-    private GameObject SpawnStartRoom() {
-        int randomIndex = Random.Range(0, rooms.Length);
+    private GameObject SpawnStartRoom(List<GameObject> rooms) {
+        List<GameObject> startingRooms = GetStartingRoomsPoolFromZoneRoomsPool(rooms);
+        int randomIndexRoom = Random.Range(0, startingRooms.Count - 1);
         
-        Vector2 start2DWorldPos = new Vector2(0, 0);
+        Vector2 start2DWorldPos = new(0, 0);
 
-        int newDirection = Random.Range(0, 3);
-        Quaternion newRotation = Quaternion.Euler(0, newDirection * 90, 0);
-        Debug.Log("Start_Dir: " + newDirection);
+        (Quaternion newRotation, int newDirection) = SetRandomRotationAndDirection();
 
-        // Quaternion randomDirection = SetRandomDirection();
-        GameObject room = SpawnRoom(randomIndex, rooms, startPosition, newRotation, start2DWorldPos);
+        GameObject room = SpawnRoom(randomIndexRoom, startingRooms, startPosition, newRotation, start2DWorldPos);
         bool[] startExitsFromRoom = CheckNumAvailableExits(room);
-        Debug.Log("StartExists: \n" + startExitsFromRoom[0] + ", " + startExitsFromRoom[1] + ", " + startExitsFromRoom[2] + "," + startExitsFromRoom[3]);
         ChangeExistFromRoom(newDirection, startExitsFromRoom);
-        Debug.Log("StartExistsWithNewDir: \n" + startExitsFromRoom[0] + ", " + startExitsFromRoom[1] + ", " + startExitsFromRoom[2] + "," + startExitsFromRoom[3]);
+
         return room;
     }
 
@@ -41,16 +40,39 @@ public class SpawnRoomManager : MonoBehaviour
     /// <param name="rotation"></param>
     /// <param name="newPos"></param>
     /// <returns></returns>
-    private GameObject SpawnRoom(int randomIndex, GameObject[] rooms, Vector3 worldPos, Quaternion rotation, Vector2 new2DPos) {
+    private GameObject SpawnRoom(int randomIndex, List<GameObject> rooms, Vector3 worldPos, Quaternion rotation, Vector2 new2DPos) {
         if (roomsWorldPositions.ContainsKey(new2DPos)) {
             return null; // Если позиция уже занята, не создаем новую комнату
         }
 
-        GameObject room = Instantiate(rooms[randomIndex], worldPos, rotation);
-        room.GetComponent<RoomManager>().WorldPos = new2DPos;
+        GameObject room = rooms[randomIndex];
+        room.transform.SetPositionAndRotation(worldPos, rotation);
+        room.SetActive(true);
+
+        // GameObject room = Instantiate(rooms[randomIndex], worldPos, rotation);
+        RoomManager roomManager = room.GetComponent<RoomManager>();
+        roomManager.WorldPos = new2DPos;
         roomsWorldPositions.Add(new2DPos, room); // Добавляем новую позицию в HashSet
+        if (!roomManager.canUsedInfinitely) {
+            roomManager.isUsed = true; // комнаты должны использоваться только 1 раз кроме случая если они canUsedInfinitely
+        }
         return room;
     }
+
+    private List<GameObject> GetStartingRoomsPoolFromZoneRoomsPool(List<GameObject> rooms) {
+        List<GameObject> startingRooms = new();
+        foreach (GameObject room in rooms) {
+            if (room.GetComponent<RoomManager>().CanBeUsedAsStartingRoom) {
+                startingRooms.Add(room);
+            }
+        }
+        if (startingRooms.Count == 0) {
+            Debug.LogError("No starting rooms in this zone!");
+            return startingRooms;
+        }
+        return startingRooms;
+    }
+
 
     /// <summary>
     /// Переносит выходы из скрипта RoomManager (Room Data) в SpawnRoomManager.
@@ -69,18 +91,19 @@ public class SpawnRoomManager : MonoBehaviour
     private void SpawnAdjacentRooms(GameObject room) {
         RoomManager roomManager = room.GetComponent<RoomManager>();
         bool[] existFromRoom = roomManager.exitsFromRoom;
-        Debug.Log("ExistsInAdjacent: 0 - \n" + existFromRoom[0] + ", 1 - " + existFromRoom[1] + ", 2 - " + existFromRoom[2] + ", 3 - " + existFromRoom[3]);
+
+        Quaternion newRotation;
+        Vector3 newPosition;
+        Vector2 new2DWorldPos;
+
+        int[] requiredRoomType;
+        bool[] newRoomExitsFromRoom;
+
         for (int i = 0; i < existFromRoom.Length; i++) {
-            Debug.Log("I: " + i + "; ExistsInAdjacent - " + existFromRoom[i]);
             // i = 0 -> north, 1 -> east, 2 -> south, 3 -> west
             if (!existFromRoom[i]) {
-                Debug.Log("I to continue: " + i);
                 continue;
             }
-
-            Quaternion newRotation;
-            Vector3 newPosition;
-            Vector2 new2DWorldPos;
 
             switch (i) {
                 case 0: // north
@@ -103,21 +126,21 @@ public class SpawnRoomManager : MonoBehaviour
                     return;
             }
 
-            int[] requiredRoomType = CheckRequiredRoomType(new2DWorldPos);
-            GameObject[] availableRooms = DetermineListAvailableRooms(rooms, requiredRoomType);
-            int randomIndex = Random.Range(0, availableRooms.Length);
+            requiredRoomType = CheckRequiredRoomType(new2DWorldPos);
+            List<GameObject> availableRooms = DetermineListAvailableRooms(rooms, requiredRoomType);
+            int randomIndex = Random.Range(0, availableRooms.Count - 1);
 
             int newDirection = GetDirectionForRoom(availableRooms[randomIndex], requiredRoomType);
             newRotation = Quaternion.Euler(0, newDirection * 90, 0);
             
             GameObject newRoom = SpawnRoom(randomIndex, availableRooms, newPosition, newRotation, new2DWorldPos);
-            bool[] newRoomExitsFromRoom = newRoom.GetComponent<RoomManager>().exitsFromRoom;
+            newRoomExitsFromRoom = newRoom.GetComponent<RoomManager>().exitsFromRoom;
             ChangeExistFromRoom(newDirection, newRoomExitsFromRoom);
         }
     }
 
     private int GetDirectionForRoom(GameObject room, int[] requiredRoomType) {
-        List<int> possibleRotations = new List<int>();
+        List<int> possibleRotations = new();
         bool[] exitsFromRoom = room.GetComponent<RoomManager>().exitsFromRoom;
         bool isMatch;
 
@@ -131,7 +154,6 @@ public class SpawnRoomManager : MonoBehaviour
 
         if (possibleRotations.Count > 0) {
             int randomIndex = Random.Range(0, possibleRotations.Count - 1);
-            Debug.Log("Rotation: " + possibleRotations[randomIndex]);
             return possibleRotations[randomIndex];
         } else {
             return 0; // Возвращаем без поворота, если нет подходящих поворотов
@@ -192,31 +214,45 @@ public class SpawnRoomManager : MonoBehaviour
     /// </summary>
     /// <param name="rooms"></param>
     /// <returns></returns>
-    private GameObject[] DetermineListAvailableRooms(GameObject[] rooms, int[] requiredRoomType) {
-        List<GameObject> availableRooms = new List<GameObject>();
+    private List<GameObject> DetermineListAvailableRooms(List<GameObject> rooms, int[] requiredRoomType) {
+        List<GameObject> availableRooms = new();
+        RoomManager roomManager;
+        bool[] exitsFromRoom;
+        bool isMatch;
 
         foreach (GameObject room in rooms) {
-            bool[] exitsFromRoom = room.GetComponent<RoomManager>().exitsFromRoom;
+            roomManager = room.GetComponent<RoomManager>();
+            exitsFromRoom = roomManager.exitsFromRoom;
 
             for (int rotation = 0; rotation < 4; rotation++) {
-                bool isMatch = CheckIsMatchForDetermineAvailableDirection(exitsFromRoom, rotation, requiredRoomType);
+                isMatch = CheckIsMatchForDetermineAvailableDirection(exitsFromRoom, rotation, requiredRoomType);
 
-                if (isMatch) {
+                if (isMatch && !roomManager.isUsed) {
                     availableRooms.Add(room);
                     break;
                 }
             }
         }
 
-        return availableRooms.ToArray();
+        return availableRooms;
     }
 
+    /// <summary>
+    /// Узнаёт, можно ли использовать комнату прокручивая её по часовой стрелке.
+    /// </summary>
+    /// <param name="exitsFromRoom"></param>
+    /// <param name="rotation"></param>
+    /// <param name="requiredRoomType"></param>
+    /// <returns></returns>
     private bool CheckIsMatchForDetermineAvailableDirection(bool[] exitsFromRoom, int rotation, int[] requiredRoomType) {
         bool isMatch = true;
+        int required;
+        bool exit;
 
+        // Проверяем, чтобы все выходя для комнаты были допустимы
         for (int i = 0; i < 4; i++) {
-            int required = requiredRoomType[i];
-            bool exit = exitsFromRoom[(i + (4 - rotation)) % 4];
+            required = requiredRoomType[i];
+            exit = exitsFromRoom[(i + (4 - rotation)) % 4];
 
             if ((required == 1 && !exit) || (required == -1 && exit)) {
                 isMatch = false;
@@ -227,52 +263,13 @@ public class SpawnRoomManager : MonoBehaviour
         return isMatch;
     }
 
-    /*
-    private GameObject[] DetermineListAvailableRooms(GameObject[] rooms, Vector2 roomWorldPos) {
-        List<GameObject> availableRooms = new List<GameObject>();
-        int[] requiredRoomType = CheckRequiredRoomType(roomWorldPos);
-        bool[] exitsFromRoom;
-        foreach (GameObject room in rooms) {
-            exitsFromRoom = room.GetComponent<RoomManager>().exitsFromRoom;
-
-            foreach (int availabilityExit in requiredRoomType) {
-                
-            }
-
-            availableRooms.Add(room);
-        }
-
-        return availableRooms.ToArray();
-    }
-    */
-
     /// <summary>
     /// Задаёт рандомное направление для комнаты (север, восток, юг, запад (по часовой стрелке))
     /// </summary>
     /// <returns></returns>
-    private Quaternion SetRandomDirection() {
-        int randomIndex = Random.Range(0, 4);
-        Quaternion newRotation;
-
-        switch (randomIndex) {
-            case 0: // north
-                newRotation = Quaternion.Euler(0, 0, 0);
-                break;
-            case 1: // east
-                newRotation = Quaternion.Euler(0, 90, 0);
-                break;
-            case 2: // south
-                newRotation = Quaternion.Euler(0, 180, 0);
-                break;
-            case 3: // west
-                newRotation = Quaternion.Euler(0, 270, 0);
-                break;
-            default:
-                newRotation = Quaternion.identity;
-                break;
-        }
-
-        return newRotation;
+    private (Quaternion, int) SetRandomRotationAndDirection() {
+        int randomIndex = Random.Range(0, 3);
+        return (Quaternion.Euler(0, randomIndex * 90, 0), randomIndex);
     }
 
     /// <summary>
@@ -283,6 +280,7 @@ public class SpawnRoomManager : MonoBehaviour
     private int[] CheckRequiredRoomType(Vector2 roomWorldPos) {
         // 0 - комната не создана; 1 - смежная комната имеет общую дверь с этой комнатой; -1 - смежная комната не имеет общей двери с этой комнатой
         int[] requiredRoomType = new int[4];
+        
         for (int i = 0; i < 4; i++) {
             switch (i) {
                 case 0: // north
@@ -311,7 +309,8 @@ public class SpawnRoomManager : MonoBehaviour
     private void CheckAdjacentRoom(Vector2 adjacentRoomWorldPos, int[] requiredRoomType, int index) {
         if (roomsWorldPositions.ContainsKey(adjacentRoomWorldPos)) {
             roomsWorldPositions.TryGetValue(adjacentRoomWorldPos, out GameObject adjacentRoom);
-            // В части где индекс меняем местами север с югом, запад с востоком, так как на северной смежной карте должен быть выход на юге этой карты
+            // В части где индекс меняем местами север с югом, запад с востоком, 
+            // так как на северной смежной карте (вверхней соседней комнате) должен быть выход на юг в комнату в которой находится игрок
             if (adjacentRoom.GetComponent<RoomManager>().exitsFromRoom[(index + 2) % 4]) {
                 requiredRoomType[index] = 1;
             } else {
@@ -319,4 +318,18 @@ public class SpawnRoomManager : MonoBehaviour
             }
         }
     }
+
+    /// <summary>
+    /// Возвращает индекс стартовой зоны. По стандарту игрок появляется в зоне коридоров.
+    /// Если стоит дополнительный флажок "random = true", то стартовая зона рандомится.
+    /// </summary>
+    /// <param name="random"></param>
+    /// <returns></returns>
+    private int GetStartingIndexZone(bool random = false) {
+        if (random) {
+            return Random.Range(0, numOfZones - 1);
+        } else {
+            return 0;
+        }
+    } 
 }
