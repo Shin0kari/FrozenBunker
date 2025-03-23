@@ -4,6 +4,9 @@ using UnityEngine;
 public class RoomsPool : MonoBehaviour
 {
     [SerializeField] private GameObject[] roomPrefabs;
+    // Количество комнат в каждой зоне должно быть не меньше 5 (возможно 5 * 4 = 20). Иначе есть шанс, что соседняя комната не заспавнится. 
+    // Так как когда игрок появляется, есть шанс спавна 4 смежных комнат (а с учётом стартовой комнаты их 5). 
+    // И при переходе в соседнюю комнату, комнаты, которые находятся через одну комнату, выключаются и снова становятся доступны для спавна
     [SerializeField] private List<GameObject> poolCommonAreaRooms = new();
     [SerializeField] private List<GameObject> poolLivingAreaRooms = new();
     [SerializeField] private List<GameObject> poolHydroponicAreaRooms = new();
@@ -33,6 +36,7 @@ public class RoomsPool : MonoBehaviour
                 room = Instantiate(roomPrefab, new Vector3(0, 0, 0), Quaternion.identity);
                 // префабы и так неактивны, так что можно удалить нижнюю строку
                 room.SetActive(false);
+                room.GetComponent<RoomManager>().SpawnRoomManager = gameObject.GetComponent<SpawnRoomManager>();
 
                 GetPoolRooms(i).Add(room);
             }

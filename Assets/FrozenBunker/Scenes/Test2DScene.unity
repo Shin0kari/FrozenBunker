@@ -1367,9 +1367,11 @@ GameObject:
   - component: {fileID: 215859626}
   - component: {fileID: 215859625}
   - component: {fileID: 215859624}
+  - component: {fileID: 215859628}
+  - component: {fileID: 215859629}
   m_Layer: 0
-  m_Name: Cube
-  m_TagString: Untagged
+  m_Name: Player
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1457,13 +1459,53 @@ Transform:
   m_GameObject: {fileID: 215859623}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: 0.9999384, z: -0, w: 0.011096202}
-  m_LocalPosition: {x: 0, y: 0.995, z: 3.94}
+  m_LocalPosition: {x: 0, y: 6.05, z: 0}
   m_LocalScale: {x: 1, y: 2, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 330585546}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 178.728, z: 0}
+--- !u!54 &215859628
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 215859623}
+  serializedVersion: 4
+  m_Mass: 1
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 116
+  m_CollisionDetection: 0
+--- !u!114 &215859629
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 215859623}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 11ae3a009b4f1ad43b44227d490cda4c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  playerPos: {x: 0, y: 0}
 --- !u!4 &219434540 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2601544255839034428, guid: e6f631f77a7756d4fa49b1f543953b0f, type: 3}
@@ -6711,8 +6753,12 @@ MonoBehaviour:
   roomPrefabs:
   - {fileID: 1563745171371136470, guid: 6337a385ea2f04840b6d93df6bc72634, type: 3}
   - {fileID: 5541411867230170055, guid: 3cf0103469128034d9a696b690b383ee, type: 3}
+  - {fileID: 5541411867230170055, guid: 9d15eb1729a56504982b2db8832e4540, type: 3}
   - {fileID: 8449126162288015984, guid: 1bc14ba31dae71844a48b033789736a2, type: 3}
+  - {fileID: 8449126162288015984, guid: ce25bc8b480ef0843b684878f63336fc, type: 3}
   - {fileID: 5091201579486489554, guid: c1a23390d8a610a4f9ebceca4291e358, type: 3}
+  - {fileID: 5091201579486489554, guid: af83863e4118fd645a29090fc1fd77bf, type: 3}
+  - {fileID: 1563745171371136470, guid: e4b316de7e72e574ab9cd4ea5cbe5336, type: 3}
   poolCommonAreaRooms: []
   poolLivingAreaRooms: []
   poolHydroponicAreaRooms: []

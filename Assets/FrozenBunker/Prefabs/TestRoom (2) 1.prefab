@@ -553,7 +553,7 @@ GameObject:
   - component: {fileID: 2712904314097836967}
   - component: {fileID: 8941733248010005757}
   m_Layer: 0
-  m_Name: TestRoom (2)
+  m_Name: TestRoom (2) 1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -594,7 +594,7 @@ MonoBehaviour:
   exitsFromRoom: 01010101
   canUsedInfinitely: 1
   isUsed: 0
-  canBeUsedAsStartingRoom: 1
+  canBeUsedAsStartingRoom: 0
   availableForNextPoolRooms: 01010101010101010101
 --- !u!65 &8941733248010005757
 BoxCollider:

@@ -15,10 +15,27 @@ public class RoomManager : MonoBehaviour
     [SerializeField] private bool[] availableForNextPoolRooms = new bool[10];
     public bool[] AvailableForNextPoolRooms { get { return availableForNextPoolRooms; } }
 
-    private Vector2 worldPos = new(0, 0);
+    [SerializeField] private Vector2 worldPos = new(0, 0);
     public Vector2 WorldPos
     {
         get { return worldPos; }
         set { worldPos = value; }
+    }
+
+    private SpawnRoomManager spawnRoomManager;
+    public SpawnRoomManager SpawnRoomManager
+    {
+        set { spawnRoomManager = value; }
+    }
+
+    void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("Player")) {
+            // gameObject.GetComponent<BoxCollider>().enabled = false;
+            PlayerController playerController = other.GetComponent<PlayerController>();
+            spawnRoomManager.DespawnOldAdjacentRooms(playerController.PlayerPos, WorldPos);
+            playerController.PlayerPos = WorldPos;
+            spawnRoomManager.SpawnAdjacentRooms(gameObject);
+        }
     }
 }
