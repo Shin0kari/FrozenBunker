@@ -120,7 +120,7 @@ GameObject:
   - component: {fileID: 121363686020546045}
   - component: {fileID: 3173959745633067747}
   m_Layer: 0
-  m_Name: TestRoom (3) 1
+  m_Name: DeadEndRoom
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -134,8 +134,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5091201579486489554}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalRotation: {x: 0, y: 1, z: 0, w: -0.00000004371139}
+  m_LocalPosition: {x: -25, y: 0, z: 50}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -155,10 +155,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5315e63ad094cbd49bdd10425cc5d793, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  exitsFromRoom: 01000000
+  exitsFromRoom: 01010101
   canUsedInfinitely: 1
-  isUsed: 0
+  isUsed: 1
   canBeUsedAsStartingRoom: 0
+  canBeUsedAsDeadEndRoom: 1
   availableForNextPoolRooms: 01010101010101010101
   worldPos2D: {x: 0, y: 0}
 --- !u!65 &3173959745633067747
@@ -247,7 +248,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 02e253997d275f8468ff0fcbd4736773, type: 2}
+  - {fileID: 2100000, guid: 5f73e8f1037a52c46bf6bd6760c0dd1d, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
