@@ -33,7 +33,7 @@ public class RoomsPool : MonoBehaviour
                     continue;
                 }
 
-                room = Instantiate(roomPrefab, new Vector3(0, 0, 0), Quaternion.identity);
+                room = Instantiate(roomPrefab, Vector3.zero, Quaternion.Euler(Vector3.zero));
                 // префабы и так неактивны, так что можно удалить нижнюю строку
                 room.SetActive(false);
                 room.GetComponent<RoomManager>().SpawnRoomManager = gameObject.GetComponent<SpawnRoomManager>();

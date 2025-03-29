@@ -91,10 +91,6 @@ public class SpawnRoomManager : MonoBehaviour
         };
 
         roomsData.Add(new2DPos, newRoomData); // Добавляем новую позицию в HashSet
-
-        Debug.Log("Проверка словаря: 2D pos: (" + new2DPos.x + ", " + new2DPos.y + "). Проверка наличия комнаты: " + roomsData.ContainsKey(new2DPos));
-
-        // roomManager.isUsed = true;
         return room;
     }
 
@@ -102,7 +98,7 @@ public class SpawnRoomManager : MonoBehaviour
         if (roomsData.ContainsKey(new2DPos)) {
             roomsData.TryGetValue(new2DPos, out RoomData roomData);
             GameObject room = roomData.RoomObject;
-            Quaternion newRotation = Quaternion.Euler(0, roomData.Rotation * 90, 0); 
+            Quaternion newRotation = Quaternion.Euler(0, roomData.Rotation, 0); 
             room.transform.SetPositionAndRotation(new Vector3(new2DPos.x * 25, 0, new2DPos.y * 25), newRotation);
             room.SetActive(true);
             RoomManager roomManager = room.GetComponent<RoomManager>(); 
@@ -379,10 +375,8 @@ public class SpawnRoomManager : MonoBehaviour
             roomsData.TryGetValue(adjacentRoomWorldPos, out RoomData roomData);
             GameObject adjacentRoom = roomData.RoomObject;
 
-            // В части где индекс меняем местами север с югом, запад с востоком, 
+            // В части где индекс, мы меняем местами север с югом, запад с востоком, 
             // так как на северной смежной карте (вверхней соседней комнате) должен быть выход на юг в комнату в которой находится игрок
-            // Debug.Log("exitsFromRoom for index " + index + ": " + adjacentRoom.GetComponent<RoomManager>().exitsFromRoom[(index + 2) % 4]);
-
             if (adjacentRoom.GetComponent<RoomManager>().exitsFromRoom[(index + 2) % 4]) {
                 requiredRoomType[index] = 1;
             } else {
