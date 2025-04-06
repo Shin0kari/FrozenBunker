@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 5220630471316133771}
   - component: {fileID: 4845605134943681645}
   - component: {fileID: 2683679248485322669}
+  - component: {fileID: 2664842211623086271}
   m_Layer: 0
   m_Name: RoomPlane
   m_TagString: Untagged
@@ -109,6 +110,19 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &2664842211623086271
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1105428136783737053}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2a148ca124f4ec4bbb59acc8fe8d76a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  newZoneMaterial: {fileID: 2100000, guid: 01d1b58001bf70744a42df607419e31d, type: 2}
 --- !u!1 &1563745171371136470
 GameObject:
   m_ObjectHideFlags: 0
@@ -162,8 +176,11 @@ MonoBehaviour:
   canUsedInfinitely: 1
   isUsed: 0
   canBeUsedAsStartingRoom: 0
-  availableForNextPoolRooms: 01010101010101010101
-  worldPos: {x: 0, y: 0}
+  availableForNextPoolRooms: 0100000100000000000000
+  worldPos2D: {x: 0, y: 0}
+  isImportantRoom: 0
+  isRoomTransitional: 0
+  zoneType: 0
 --- !u!65 &8629405618893980681
 BoxCollider:
   m_ObjectHideFlags: 0

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class RoomsPool : MonoBehaviour
@@ -18,29 +19,55 @@ public class RoomsPool : MonoBehaviour
     [SerializeField] private List<GameObject> poolMedicalAreaRooms = new();
     [SerializeField] private List<GameObject> poolHeatingAreaRooms = new();
 
+    [SerializeField] private List<GameObject> poolDeadEndRooms = new();
+
     void Awake() {
-        InitializingZonePools();
+        // ABSTRACTION
+        InitializingZoneDataFromPrefabs();
     }
 
-    private void InitializingZonePools() {
+    private void InitializingZoneDataFromPrefabs() {
         bool[] availableForNextPoolRooms;
         GameObject room;
+        RoomManager roomManager;
 
         foreach (var roomPrefab in roomPrefabs) {
             availableForNextPoolRooms = roomPrefab.GetComponent<RoomManager>().AvailableForNextPoolRooms;
-            for (int i = 0; i < availableForNextPoolRooms.Length; i++) {
-                if (!availableForNextPoolRooms[i]) {
+            
+            for (int zoneType = 0; zoneType < availableForNextPoolRooms.Length; zoneType++) {
+                if (!availableForNextPoolRooms[zoneType]) {
                     continue;
                 }
 
                 room = Instantiate(roomPrefab, Vector3.zero, Quaternion.Euler(Vector3.zero));
                 // префабы и так неактивны, так что можно удалить нижнюю строку
                 room.SetActive(false);
-                room.GetComponent<RoomManager>().SpawnRoomManager = gameObject.GetComponent<SpawnRoomManager>();
+                roomManager = room.GetComponent<RoomManager>();
 
-                GetPoolRooms(i).Add(room);
+                switch (zoneType) {
+                    case var type when type == 3 || type == 6 || type == 8:
+                        room.AddComponent<NewZoneRoomManager>();
+                        room.GetComponentInChildren<ChangeZoneColor>().ChangeColor();
+                        roomManager.zoneType = zoneType; 
+                        break;
+                    case var type when type == availableForNextPoolRooms.Length - 1:
+                        room.AddComponent<DeadEndRoomManager>();
+                        roomManager.zoneType = -1;
+                        break;
+                    default:
+                        roomManager.zoneType = zoneType;
+                        break;
+                }
+
+                AddingRoomInZonePool(room, roomManager, zoneType);
+                GetComponent<SpawnNewZoneManager>().AddImportantRoomToCounter(zoneType);
             }
         }
+    }
+
+    private void AddingRoomInZonePool(GameObject room, RoomManager roomManager, int zoneType) {
+        roomManager.SpawnRoomManager = GetComponent<SpawnRoomManager>();
+        GetPoolRooms(zoneType).Add(room);
     }
 
     public List<GameObject> GetPoolRooms(int index) {
@@ -56,7 +83,7 @@ public class RoomsPool : MonoBehaviour
             7 => poolWarehouseAreaRooms,
             8 => poolMedicalAreaRooms,
             9 => poolHeatingAreaRooms,
-            _ => new List<GameObject>(),
+            _ => poolDeadEndRooms,
         };
     }
 }
