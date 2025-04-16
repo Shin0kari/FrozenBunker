@@ -122,7 +122,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b2a148ca124f4ec4bbb59acc8fe8d76a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  newZoneMaterial: {fileID: 2100000, guid: 01d1b58001bf70744a42df607419e31d, type: 2}
+  newZoneMaterials:
+  - {fileID: 2100000, guid: 01d1b58001bf70744a42df607419e31d, type: 2}
+  - {fileID: 2100000, guid: 2d0b8cd6f7418f84f8105aba33e3264c, type: 2}
+  - {fileID: 2100000, guid: 16d0a619b1f40894da52afdf25a1eafc, type: 2}
 --- !u!1 &1563745171371136470
 GameObject:
   m_ObjectHideFlags: 0
@@ -132,8 +135,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2814765122069838573}
-  - component: {fileID: 1356810966541507147}
   - component: {fileID: 8629405618893980681}
+  - component: {fileID: -6930730147027643406}
   m_Layer: 0
   m_Name: TestRoom
   m_TagString: Untagged
@@ -160,27 +163,6 @@ Transform:
   - {fileID: 7658003747475642577}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1356810966541507147
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1563745171371136470}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5315e63ad094cbd49bdd10425cc5d793, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  exitsFromRoom: 01010001
-  canUsedInfinitely: 1
-  isUsed: 0
-  canBeUsedAsStartingRoom: 0
-  availableForNextPoolRooms: 0100000100000000000000
-  worldPos2D: {x: 0, y: 0}
-  isImportantRoom: 0
-  isRoomTransitional: 0
-  zoneType: 0
 --- !u!65 &8629405618893980681
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -202,6 +184,27 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 25, y: 50, z: 25}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &-6930730147027643406
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1563745171371136470}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5315e63ad094cbd49bdd10425cc5d793, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  exitsFromRoom: 01010001
+  canUsedInfinitely: 1
+  isUsed: 0
+  canBeUsedAsStartingRoom: 0
+  availableForNextPoolRooms: 0100000100000000000000
+  worldPos2D: {x: 0, y: 0}
+  isImportantRoom: 0
+  isRoomTransitional: 0
+  zoneType: 0
 --- !u!1 &5020629102113219310
 GameObject:
   m_ObjectHideFlags: 0

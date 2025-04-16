@@ -2,6 +2,11 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
+public static class ListExtensions
+{
+    public static T GetRandom<T>(this IList<T> list) => list[Random.Range(0, list.Count)];
+}
+
 public class RoomsPool : MonoBehaviour
 {
     [SerializeField] private GameObject[] roomPrefabs;
@@ -46,13 +51,13 @@ public class RoomsPool : MonoBehaviour
 
                 switch (zoneType) {
                     case var type when type == 3 || type == 6 || type == 8:
+                        roomManager.zoneType = zoneType;
                         room.AddComponent<NewZoneRoomManager>();
-                        room.GetComponentInChildren<ChangeZoneColor>().ChangeColor();
-                        roomManager.zoneType = zoneType; 
+                        room.GetComponentInChildren<ChangeZoneColor>().ChangeColor(roomManager.zoneType);
                         break;
                     case var type when type == availableForNextPoolRooms.Length - 1:
-                        room.AddComponent<DeadEndRoomManager>();
                         roomManager.zoneType = -1;
+                        room.AddComponent<DeadEndRoomManager>();
                         break;
                     default:
                         roomManager.zoneType = zoneType;

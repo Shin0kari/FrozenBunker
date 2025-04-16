@@ -225,8 +225,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5871822596133620385}
-  - component: {fileID: -7864419698393291609}
   - component: {fileID: 8889475927416746712}
+  - component: {fileID: 4595769338248409293}
   m_Layer: 0
   m_Name: TransitionRoom
   m_TagString: Untagged
@@ -252,28 +252,6 @@ Transform:
   - {fileID: 2091495216146646941}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &-7864419698393291609
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5541411867230170055}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: beef0cbfdc4be8e4c896ede5e355d2ba, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  exitsFromRoom: 01000100
-  canUsedInfinitely: 1
-  isUsed: 0
-  canBeUsedAsStartingRoom: 0
-  availableForNextPoolRooms: 0100000000000000000000
-  worldPos2D: {x: 0, y: 0}
-  isImportantRoom: 1
-  isRoomTransitional: 1
-  zoneType: 0
-  transitionToZone: 3
 --- !u!65 &8889475927416746712
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -295,6 +273,28 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 25, y: 50, z: 25}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &4595769338248409293
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5541411867230170055}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: beef0cbfdc4be8e4c896ede5e355d2ba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  exitsFromRoom: 01000100
+  canUsedInfinitely: 0
+  isUsed: 0
+  canBeUsedAsStartingRoom: 0
+  availableForNextPoolRooms: 0100000000000000000000
+  worldPos2D: {x: 0, y: 0}
+  isImportantRoom: 1
+  isRoomTransitional: 1
+  zoneType: 0
+  transitionToZone: 3
 --- !u!1 &8053228674742563476
 GameObject:
   m_ObjectHideFlags: 0

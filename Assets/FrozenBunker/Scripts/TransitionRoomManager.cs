@@ -10,6 +10,4 @@ public class TransitionRoomManager : RoomManager
 {
     [SerializeField] private int transitionToZone;
     public int TransitionToZone { get {return transitionToZone; } }
-
-    
 }

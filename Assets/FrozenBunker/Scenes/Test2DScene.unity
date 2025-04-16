@@ -6769,9 +6769,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 12fd4e971db7613438cd276d29b148aa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  gameRuleManager: {fileID: 395934302}
-  numOfZones: 10
-  startPosition: {x: 0, y: 0, z: 0}
+  _gameRuleManager: {fileID: 395934302}
+  _totalZones: 10
+  _startPosition: {x: 0, y: 0, z: 0}
+  countImportantZoneRooms: 00000000000000000000000000000000000000000000000000000000000000000000000000000000
 --- !u!4 &1026981675
 Transform:
   m_ObjectHideFlags: 0
@@ -6836,7 +6837,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7abfa04cc1b0d8e42b9170d750699fc3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  numOfImportantRoomsInZone: 00000000000000000000000000000000000000000000000000000000000000000000000000000000
+  _gameRuleManager: {fileID: 395934302}
+  _totalZones: 10
+  _startPosition: {x: 0, y: 0, z: 0}
+  countImportantZoneRooms: 00000000000000000000000000000000000000000000000000000000000000000000000000000000
   playerController: {fileID: 215859629}
 --- !u!1001 &1028037310
 PrefabInstance:

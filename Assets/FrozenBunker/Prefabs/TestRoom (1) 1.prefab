@@ -416,4 +416,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b2a148ca124f4ec4bbb59acc8fe8d76a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  newZoneMaterial: {fileID: 2100000, guid: 01d1b58001bf70744a42df607419e31d, type: 2}
+  newZoneMaterials:
+  - {fileID: 2100000, guid: 01d1b58001bf70744a42df607419e31d, type: 2}
+  - {fileID: 2100000, guid: 2d0b8cd6f7418f84f8105aba33e3264c, type: 2}
+  - {fileID: 2100000, guid: 16d0a619b1f40894da52afdf25a1eafc, type: 2}
