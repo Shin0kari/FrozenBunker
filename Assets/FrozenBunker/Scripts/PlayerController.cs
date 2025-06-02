@@ -2,8 +2,8 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
-    [SerializeField] private Vector2 playerPos;
-    public Vector2 PlayerPos
+    [SerializeField] private Vector3 playerPos;
+    public Vector3 PlayerPos
     {
         get { return playerPos; }
         set { playerPos = value; }

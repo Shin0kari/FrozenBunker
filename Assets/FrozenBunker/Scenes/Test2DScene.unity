@@ -1473,10 +1473,10 @@ Rigidbody:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 215859623}
-  serializedVersion: 4
+  serializedVersion: 5
   m_Mass: 1
-  m_Drag: 0
-  m_AngularDrag: 0.05
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -1505,7 +1505,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 11ae3a009b4f1ad43b44227d490cda4c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  playerPos: {x: 0, y: 0}
+  playerPos: {x: 0, y: -1, z: 0}
 --- !u!4 &219434540 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2601544255839034428, guid: e6f631f77a7756d4fa49b1f543953b0f, type: 3}
@@ -6750,6 +6750,7 @@ GameObject:
   - component: {fileID: 1026981676}
   - component: {fileID: 1026981674}
   - component: {fileID: 1026981677}
+  - component: {fileID: 1026981678}
   m_Layer: 0
   m_Name: SpawnRoomManager
   m_TagString: Untagged
@@ -6770,9 +6771,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _gameRuleManager: {fileID: 395934302}
-  _totalZones: 10
-  _startPosition: {x: 0, y: 0, z: 0}
-  countImportantZoneRooms: 00000000000000000000000000000000000000000000000000000000000000000000000000000000
+  _startFloor: -1
+  _startPosition: {x: 0, y: 25, z: 0}
+  zoneFloorData:
+  - {x: 1, y: 2}
+  - {x: 1, y: 4}
+  - {x: 0, y: 0}
+  - {x: 0, y: 6}
+  - {x: 0, y: 7}
+  - {x: -1, y: 0}
+  - {x: -1, y: 1}
+  - {x: -1, y: 3}
+  - {x: -1, y: 8}
+  - {x: -2, y: 5}
+  - {x: -3, y: 9}
 --- !u!4 &1026981675
 Transform:
   m_ObjectHideFlags: 0
@@ -6801,19 +6813,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   roomPrefabs:
-  - {fileID: 1563745171371136470, guid: 6337a385ea2f04840b6d93df6bc72634, type: 3}
-  - {fileID: 5541411867230170055, guid: 3cf0103469128034d9a696b690b383ee, type: 3}
-  - {fileID: 5541411867230170055, guid: 9d15eb1729a56504982b2db8832e4540, type: 3}
-  - {fileID: 8449126162288015984, guid: 1bc14ba31dae71844a48b033789736a2, type: 3}
   - {fileID: 8449126162288015984, guid: ce25bc8b480ef0843b684878f63336fc, type: 3}
-  - {fileID: 5091201579486489554, guid: c1a23390d8a610a4f9ebceca4291e358, type: 3}
-  - {fileID: 5091201579486489554, guid: af83863e4118fd645a29090fc1fd77bf, type: 3}
+  - {fileID: 8449126162288015984, guid: 1bc14ba31dae71844a48b033789736a2, type: 3}
   - {fileID: 1563745171371136470, guid: e4b316de7e72e574ab9cd4ea5cbe5336, type: 3}
-  - {fileID: 5541411867230170055, guid: 074d8187f1f140e419c0425673863814, type: 3}
-  - {fileID: 5091201579486489554, guid: 6c22b6cd2f15c3f42a7daec8eaa61bb7, type: 3}
-  - {fileID: 5091201579486489554, guid: 07d36e8f57ea3744cb8c44715c3ec2d1, type: 3}
-  - {fileID: 5091201579486489554, guid: 6a51e426c5f0cc14e8dcb9d4c110fb83, type: 3}
+  - {fileID: 1563745171371136470, guid: 6337a385ea2f04840b6d93df6bc72634, type: 3}
+  - {fileID: 5541411867230170055, guid: 9d15eb1729a56504982b2db8832e4540, type: 3}
+  - {fileID: 5541411867230170055, guid: 3cf0103469128034d9a696b690b383ee, type: 3}
+  - {fileID: 5091201579486489554, guid: af83863e4118fd645a29090fc1fd77bf, type: 3}
+  - {fileID: 5091201579486489554, guid: c1a23390d8a610a4f9ebceca4291e358, type: 3}
   - {fileID: 5091201579486489554, guid: 7a39dd2c77c031d43a30862ae5661135, type: 3}
+  - {fileID: 5091201579486489554, guid: 6a51e426c5f0cc14e8dcb9d4c110fb83, type: 3}
+  - {fileID: 5091201579486489554, guid: 07d36e8f57ea3744cb8c44715c3ec2d1, type: 3}
+  - {fileID: 5091201579486489554, guid: 6c22b6cd2f15c3f42a7daec8eaa61bb7, type: 3}
   poolCommonAreaRooms: []
   poolLivingAreaRooms: []
   poolHydroponicAreaRooms: []
@@ -6825,6 +6836,21 @@ MonoBehaviour:
   poolMedicalAreaRooms: []
   poolHeatingAreaRooms: []
   poolDeadEndRooms: []
+  countImportantZoneRooms: 00000000000000000000000000000000000000000000000000000000000000000000000000000000
+  linearTransitionalType: 00000000
+  liftTransitionalType: 01000000
+  ladderTransitionalType: 02000000
+  newZoneMaterials:
+  - {fileID: 2100000, guid: cfe5ef99295aa5d4c9afa036fc398683, type: 2}
+  - {fileID: 2100000, guid: 63a4d12d3e27f694fb7fc6a1313bcc05, type: 2}
+  - {fileID: 2100000, guid: 6a7cc31b8415f97449146ccf8a4e668e, type: 2}
+  - {fileID: 2100000, guid: 01d1b58001bf70744a42df607419e31d, type: 2}
+  - {fileID: 2100000, guid: 7aa392187011a2c4ab7f1f853a7112e2, type: 2}
+  - {fileID: 2100000, guid: a53ba76cb8a46f24bab1847a7a1c8b88, type: 2}
+  - {fileID: 2100000, guid: 2d0b8cd6f7418f84f8105aba33e3264c, type: 2}
+  - {fileID: 2100000, guid: ceecf0ade20083e40954850cf89a4b9f, type: 2}
+  - {fileID: 2100000, guid: 16d0a619b1f40894da52afdf25a1eafc, type: 2}
+  - {fileID: 2100000, guid: 7e1c086a2ce95be48b51cfa35577c0e0, type: 2}
 --- !u!114 &1026981677
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6838,9 +6864,48 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _gameRuleManager: {fileID: 395934302}
-  _totalZones: 10
-  _startPosition: {x: 0, y: 0, z: 0}
-  countImportantZoneRooms: 00000000000000000000000000000000000000000000000000000000000000000000000000000000
+  _startFloor: -1
+  _startPosition: {x: 0, y: 25, z: 0}
+  zoneFloorData:
+  - {x: 1, y: 2}
+  - {x: 1, y: 4}
+  - {x: 0, y: 0}
+  - {x: 0, y: 6}
+  - {x: 0, y: 7}
+  - {x: -1, y: 0}
+  - {x: -1, y: 1}
+  - {x: -1, y: 3}
+  - {x: -1, y: 8}
+  - {x: -2, y: 5}
+  - {x: -3, y: 9}
+  playerController: {fileID: 215859629}
+--- !u!114 &1026981678
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1026981673}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b6f15840d1f44442903ed5722c24512, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _gameRuleManager: {fileID: 395934302}
+  _startFloor: -1
+  _startPosition: {x: 0, y: 25, z: 0}
+  zoneFloorData:
+  - {x: 1, y: 2}
+  - {x: 1, y: 4}
+  - {x: 0, y: 0}
+  - {x: 0, y: 6}
+  - {x: 0, y: 7}
+  - {x: -1, y: 0}
+  - {x: -1, y: 1}
+  - {x: -1, y: 3}
+  - {x: -1, y: 8}
+  - {x: -2, y: 5}
+  - {x: -3, y: 9}
   playerController: {fileID: 215859629}
 --- !u!1001 &1028037310
 PrefabInstance:

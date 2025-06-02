@@ -2,12 +2,16 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 
+using Unity.VisualScripting;
+
 public enum Direction
 {
     North = 0,
     East = 1,
     South = 2,
-    West = 3
+    West = 3,
+    Up = 4,
+    Down = 5
 }
 
 public class RoomData
@@ -25,24 +29,52 @@ public class SpawnRoomManager : MonoBehaviour
 
     [Header("Settings")]
     
-    [SerializeField] private Vector3 _startPosition = Vector3.zero;
-    [SerializeField] protected int[] countImportantZoneRooms = new int[10];
+    [SerializeField] private int _startFloor = -1;
+    [SerializeField] private Vector3 _startPosition = Vector3.up * 25;
+
+    // !!! баг !!! Добавить проверку, чтобы спавнилась только та переходная зона, 
+    // которая ведёт к доступной для этажа зоне
+    // zoneIndex - numFloor
+    [SerializeField] private Vector2Int[] zoneFloorData = new Vector2Int[]
+    {
+        new(1, 2),
+        new(1, 4),
+
+        new(0, 0),
+        new(0, 6),
+        new(0, 7),
+
+        new(-1, 0),
+        new(-1, 1),
+        new(-1, 3),
+        new(-1, 8),
+
+        new(-2, 5),
+
+        new(-3, 9)
+    };
+
     private int _totalZones = 10;
     protected float _roomSize = 25f;
     protected int CountZoneRoomsExits;
 
-    public Dictionary<Vector2, RoomData> _spawnedRooms = new();
-    
+    protected Dictionary<Vector3, RoomData> _spawnedRoomsData = new();
+    public Dictionary<Vector3, RoomData> SpawnedRoomsData { get { return _spawnedRoomsData; } }
+
     private const float RotationStep = 90f;
     protected const int DirectionsCount = 4;
+    protected const int AdditionalDirCount = 2;
     protected const int DeadEndZoneType = -1;
 
     private void Start() {
         _roomsPool = GetComponent<RoomsPool>();
-        SpawnStartingRoom(GetStartingZoneIndex());
+        var startingZoneIndex = GetStartingZoneIndex();
+        var startingNumFloor = GetStartingNumFloor(startingZoneIndex);
+        var startingRoomPos = GetStartingPosition(startingNumFloor);
+        SpawnStartingRoom(startingZoneIndex, startingRoomPos);
     }
 
-    private void SpawnStartingRoom(int zoneIndex) {
+    private void SpawnStartingRoom(int zoneIndex, Vector3 startWorldPos) {
         CountZoneRoomsExits = 0;
         var availableRooms = _roomsPool.GetPoolRooms(zoneIndex);
         var startingRooms = FilterStartingRooms(availableRooms);
@@ -56,9 +88,8 @@ public class SpawnRoomManager : MonoBehaviour
         var (rotation, direction) = GetRandomRotationAndDirection();
         var room = SpawnRoom(
             startingRoom, 
-            _startPosition, 
-            rotation, 
-            Vector2.zero
+            startWorldPos, 
+            rotation
         );
 
         UpdateRoomExits(direction, room);
@@ -87,12 +118,12 @@ public class SpawnRoomManager : MonoBehaviour
         };
     }
 
-    protected GameObject SpawnRoom(GameObject room, Vector3 worldPos, Quaternion rotation, Vector2 _2DWorldPos) {
-        if (_spawnedRooms.ContainsKey(_2DWorldPos)) {
+    protected virtual GameObject SpawnRoom(GameObject room, Vector3 worldPos, Quaternion rotation) {
+        if (TryGetRoomData(worldPos, out RoomData _roomData)) {
             return null; // Если позиция уже занята, не создаем новую комнату
         }
 
-        ChangeSettingsInRoomManager(room, _2DWorldPos, worldPos, rotation, true);
+        ChangeSettingsInRoomManager(room, worldPos, rotation, true);
 
         RoomData newRoomData = new()
         {
@@ -100,33 +131,35 @@ public class SpawnRoomManager : MonoBehaviour
             RotationY = rotation.eulerAngles.y,
             // Loot = GenerateLoot()
         };
-        AddDataToSpawnedRoom(_2DWorldPos, newRoomData); // Добавляем новую позицию в HashSet
+        AddDataToSpawnedRoom(worldPos, newRoomData); // Добавляем новую позицию в HashSet
 
+        UpdateAvailableExitsCount(room);
         return room;
     }
 
-    protected virtual void AddDataToSpawnedRoom(Vector2 _2DWorldPos, RoomData newRoomData) {
-        _spawnedRooms.Add(_2DWorldPos, newRoomData);
+    protected virtual void AddDataToSpawnedRoom(Vector3 worldPos, RoomData newRoomData) {
+        _spawnedRoomsData.Add(
+            new Vector3(worldPos.x, worldPos.y, worldPos.z) / _roomSize, 
+            newRoomData
+        );
     }
 
-    protected virtual void ChangeSettingsInRoomManager(GameObject room, Vector2 _2DWorldPos, Vector3 worldPos, Quaternion rotation, bool isUsed) {
+    protected virtual void ChangeSettingsInRoomManager(GameObject room, Vector3 worldPos, Quaternion rotation, bool isUsed) {
         room.transform.SetPositionAndRotation(worldPos, rotation);
         room.SetActive(true);
 
         var roomManager = room.GetComponent<RoomManager>();
 
         UsingRoom(roomManager, isUsed);
-        roomManager._2DWorldPos = _2DWorldPos;
-
-        UpdateAvailableExitsCount(roomManager.exitsFromRoom);
+        roomManager.LocalPos = new Vector3(worldPos.x, worldPos.y, worldPos.z) / _roomSize;
     }
 
     protected void UsingRoom(RoomManager roomManager, bool isUsed) {
         if (!roomManager.isUsed) {
             roomManager.isUsed = isUsed;
-            if (!roomManager.AvailableForNextPoolRooms.Last()) {
+            if (!roomManager.AvailableForNextPoolRooms.Last() && roomManager.IsImportantRoom) {
                 // roomManager.isUsed = isUsed;
-                countImportantZoneRooms[roomManager.zoneType] -= 1;
+                _roomsPool.SubtractCountImportantRoomInZone(roomManager.zoneType);
             }
         }
         
@@ -136,16 +169,58 @@ public class SpawnRoomManager : MonoBehaviour
         // }
     }
 
-    protected void UpdateAvailableExitsCount(bool[] exits, bool isStartRoom = false) {
-        // Базовое количество добавляемых выходов (4 для стартовой комнаты, 3 для обычной)
-        int baseExitsToAdd = isStartRoom ? DirectionsCount : 3;
-        
-        // Подсчет стен без выходов
-        int wallsWithoutExits = 0;
-        foreach (var exit in exits) {if (!exit) {wallsWithoutExits++;}}
-        
-        // Обновление общего количества доступных выходов в зоне
-        CountZoneRoomsExits += baseExitsToAdd - wallsWithoutExits;
+    /// <summary>
+    /// Обновляет число выходов из зоны
+    /// </summary>
+    /// <param name="room"></param>
+    /// <param name="isStartRoom"></param>
+    protected void UpdateAvailableExitsCount(GameObject room, bool isStartRoom = false)
+    {
+        var roomManager = room.GetComponent<RoomManager>();
+
+        if (roomManager.AvailableForNextPoolRooms.Last()
+            || roomManager.IsRoomTransitional )
+        {
+            SubtractFromRoomsCount(roomManager);
+        }
+
+        AddToRoomsCount(roomManager, isStartRoom);
+    }
+
+    private void SubtractFromRoomsCount(RoomManager roomManager) {
+        for (int i = 0; i < roomManager.exitsFromRoom.Length; i++)
+        {
+            var direction = (Direction)i;
+            var worldPos = CalculateAdjacentPosition(
+                roomManager.LocalPos, 
+                direction
+            );
+
+            if (RoomExists(worldPos))
+                CountZoneRoomsExits--;
+        }
+    }
+
+    private void AddToRoomsCount(RoomManager roomManager, bool isStartRoom = false) {
+        for (int i = 0; i < roomManager.exitsFromRoom.Length; i++)
+        {
+            // если у комнаты есть выход
+            if (!roomManager.exitsFromRoom[i])
+            {
+                continue;
+            }
+
+            // если выход направлен не на другую комнату
+            var direction = (Direction)i;
+            var worldPos = CalculateAdjacentPosition(
+                roomManager.LocalPos,
+                direction
+            );
+            if (RoomExists(worldPos))
+                CountZoneRoomsExits--;
+            else
+                CountZoneRoomsExits++;
+        }
     }
 
     private List<GameObject> FilterStartingRooms(List<GameObject> rooms) {
@@ -182,7 +257,31 @@ public class SpawnRoomManager : MonoBehaviour
         }
     }
 
-    public void SpawnAdjacentRooms(GameObject room) {
+    private Vector3 GetStartingPosition(int numFloor)
+    {
+        return new Vector3(_startPosition.x, _startPosition.y * numFloor, _startPosition.z);
+    }
+
+    private int GetStartingNumFloor(int zoneIndex, bool random = false)
+    {
+        if (random || zoneIndex != 0)
+        {
+            // !!! баг !!! Нужно сделать так, что если zoneIndex != 0 но не random, то нужно использовать бд о этажах и зонах
+            int[] matchingFloors = zoneFloorData
+                .Where(pair => pair.y == zoneIndex)
+                .Select(pair => pair.x)
+                .ToArray();
+
+            return matchingFloors[Random.Range(0, matchingFloors.Length)];
+        }
+        else
+        {
+            return _startFloor;
+        }
+    }
+
+    public void SpawnAdjacentRooms(GameObject room)
+    {
         var roomManager = room.GetComponent<RoomManager>();
         var exits = roomManager.exitsFromRoom;
 
@@ -192,17 +291,16 @@ public class SpawnRoomManager : MonoBehaviour
                 continue;
 
             var direction = (Direction)i;
-            var (newRoomPos3D, newRoomPos2D) = CalculateAdjacentPosition(
-                roomManager._2DWorldPos, 
+            var worldPos = CalculateAdjacentPosition(
+                roomManager.LocalPos,
                 direction
             );
 
-            if (RoomExists(newRoomPos2D))
+            if (RoomExists(worldPos))
                 continue;
 
             var newRoom = CreateAdjacentRoomFromPool(
-                newRoomPos3D,
-                newRoomPos2D,
+                worldPos,
                 roomManager.zoneType
             );
 
@@ -210,6 +308,21 @@ public class SpawnRoomManager : MonoBehaviour
             {
                 ProcessTransitionRoom(newRoom);
             }
+
+            Debug.Log("Count RoomPool: " + _spawnedRoomsData.Count);
+        }
+
+        // Проверка: если игрок в переходной комнате типа лифт или лестница, то отображаются соответствующие переходные шахты
+        for (int i = 4; i <= 5; i++)
+        {
+            var direction = (Direction)i;
+            var worldPos = CalculateAdjacentPosition(
+                roomManager.LocalPos,
+                direction
+            );
+
+            if (RoomExists(worldPos))
+                continue;
         }
     }
 
@@ -217,44 +330,93 @@ public class SpawnRoomManager : MonoBehaviour
     {
         if (!room.TryGetComponent(out TransitionRoomManager _transitionManager))
             return;
-
-        var spawnNewZoneManager = GetComponent<SpawnNewZoneManager>();
-        var (success, newZoneRoomData) = spawnNewZoneManager.TryToGenerateNewZone(room, spawnNewZoneManager.playerController.PlayerPos);
-
-        if (!success)
-            ReplaceWithDeadEnd(room);
-        else
-            AddingDataToSpawnedRoom(newZoneRoomData);
+        
+        if (_roomsPool.LinearTransitionalTypes.Contains(_transitionManager.TypeTransitionRoom)) {
+            TrySpawnLinearTransitionalRoom(room);
+        } else if (_roomsPool.LiftTransitionalTypes.Contains(_transitionManager.TypeTransitionRoom)) {
+            TrySpawnLiftTransitionalRoom(room);
+        } else if (_roomsPool.LadderTransitionalTypes.Contains(_transitionManager.TypeTransitionRoom)) {
+            TrySpawnLadderTransitionalRoom(room);
+        }
     }
 
-    private void AddingDataToSpawnedRoom(Dictionary<Vector2, RoomData> newZoneRoomData) {
-        foreach (var pair in newZoneRoomData) {
-            _spawnedRooms.Add(pair.Key, pair.Value);
+    private void TrySpawnLinearTransitionalRoom(GameObject room) {
+        var spawnNewZoneManager = GetComponent<LinearTransitionSpawnZoneManager>();
+        var (isNewZoneGenerated, newZoneRoomData) = spawnNewZoneManager.TryToGenerateNewZone(room, spawnNewZoneManager.playerController.PlayerPos);
+        if (isNewZoneGenerated)
+        {
+            AddAllDatasToSpawnedRoom(newZoneRoomData);
+        }
+        else
+        {
+            ReplaceWithDeadEnd(room);
+        }
+    }
+
+    // Без модификаций, на этаже имеется всего одна переходная комната типа "Lift" и "Ladder"
+    // Уникальная механика переходной комнаты типа "Lift": если комнату заспавнить до нужного этажа не получается, 
+    // то комната НЕ заменяется на deadEndRoom. 
+    // Комната становится комнатой телепортом в другую сцену которая хранит информацию о другой зоне.
+    private void TrySpawnLiftTransitionalRoom(GameObject room)
+    {
+        var (isLiftGenerated, newZoneRoomData) = GetComponent<NotLinearTransitionSpawnZoneManager>().TryToGenerateLift(room);
+        if (isLiftGenerated)
+        {
+            AddAllDatasToSpawnedRoom(newZoneRoomData);
+        }
+        else
+        {
+            GenNewZoneInNewScene(room);
+        }
+    }
+
+    // 1 лестница ведёт до -2 и -3 этажа
+    // Без модификаций, на этаже имеется всего одна переходная комната типа "Lift" и "Ladder"
+    private void TrySpawnLadderTransitionalRoom(GameObject room)
+    {
+        var (isLiftGenerated, newZoneRoomData) = GetComponent<NotLinearTransitionSpawnZoneManager>().TryToGenerateLadder(room);
+        if (isLiftGenerated)
+        {
+            AddAllDatasToSpawnedRoom(newZoneRoomData);
+        }
+        else
+        {
+            GenNewZoneInNewScene(room);
+        }
+    }
+
+    private void GenNewZoneInNewScene(GameObject room) {}
+
+    private void AddAllDatasToSpawnedRoom(Dictionary<Vector3, RoomData> newZoneRoomData)
+    {
+        foreach (var pair in newZoneRoomData)
+        {
+            _spawnedRoomsData.Add(pair.Key, pair.Value);
         }
     }
 
     private void ReplaceWithDeadEnd(GameObject room) {
         var _transitionManager = room.GetComponent<TransitionRoomManager>();
-        var deadEndPosition2D = _transitionManager._2DWorldPos;
-        _spawnedRooms.Remove(_transitionManager._2DWorldPos);
+        var deadEndLocalPos = _transitionManager.LocalPos;
+        _spawnedRoomsData.Remove(_transitionManager.LocalPos);
         _transitionManager.isUsed = false;
         room.SetActive(false);
 
-        var deadEndRoom = _roomsPool.GetPoolRooms(DeadEndZoneType).GetRandom();
+        var deadEndRoom = GetRandomRoomFromPool(_roomsPool.GetPoolRooms(DeadEndZoneType));
         var (rotation, _direction) = GetRandomRotationAndDirection();
         
         SpawnRoom(
             deadEndRoom, 
-            new Vector3(deadEndPosition2D.x * _roomSize, 0, deadEndPosition2D.y * _roomSize), 
-            rotation, 
-            deadEndPosition2D
+            new Vector3(deadEndLocalPos.x * _roomSize, deadEndLocalPos.y * _roomSize * 2, deadEndLocalPos.y * _roomSize), 
+            rotation
         );
     }
 
-    protected GameObject CreateAdjacentRoomFromPool(Vector3 position3D, Vector2 position2D, int zoneType) {
+    protected GameObject CreateAdjacentRoomFromPool(Vector3 worldPos, int zoneType) {
         var minNumExits = CalculateMinNumRequiredExits(zoneType);
-        var requiredExits = CheckRequiredRoomType(position2D);
+        var requiredExits = CheckRequiredRoomType(worldPos, zoneType);
         var availableRooms = FilterRoomsPoolByExits(zoneType, requiredExits, minNumExits);
+        // Debug.Log("AvailableRooms count: " + availableRooms.Count);
 
         if (availableRooms.Count == 0)
         {
@@ -264,7 +426,7 @@ public class SpawnRoomManager : MonoBehaviour
         var selectedRoom = GetRandomRoomFromPool(availableRooms);
         var (rotation, direction) = CalculateRequiredRotationAndDirection(selectedRoom, requiredExits);
         
-        var room = SpawnRoom(selectedRoom, position3D, rotation, position2D);
+        var room = SpawnRoom(selectedRoom, worldPos, rotation);
         if (room == null) return null;
 
         UpdateRoomExits(direction, room);
@@ -273,6 +435,7 @@ public class SpawnRoomManager : MonoBehaviour
     }
 
     protected GameObject GetRandomRoomFromPool(List<GameObject> availableRooms) {
+        // Debug.Log("Num rooms in zone: " + availableRooms.Count);
         return availableRooms[Random.Range(0, availableRooms.Count)];
     }
 
@@ -280,15 +443,9 @@ public class SpawnRoomManager : MonoBehaviour
         var roomManager = room.GetComponent<RoomManager>();
         bool[] roomExits = roomManager.exitsFromRoom;
         
-        var validRotations = FindValidRotations(roomExits, requiredRoomType);
-        
-        return validRotations.Count > 0 
-            ? GetRandomRotationAndDirection(validRotations) 
-            : DefaultRotation();
+        var validRotations = roomManager.zoneType != DeadEndZoneType ? FindValidRotations(roomExits, requiredRoomType) : new List<int> { 0 };
+        return GetRandomRotationAndDirection(validRotations);
     }
-
-    private (Quaternion, int) DefaultRotation() => 
-        (Quaternion.identity, 0);
 
     private List<int> FindValidRotations(bool[] roomExits, int[] requiredExits)
     {
@@ -309,14 +466,18 @@ public class SpawnRoomManager : MonoBehaviour
     {
         var roomsPool = _roomsPool.GetPoolRooms(zoneIndex);
         var availableRoomsPool = new List<GameObject>();
-        
+
+        // Debug.Log("NumExits: " + minNumExits);
+        // Debug.Log("ReqExits: " + requiredExits[0] + ", " + requiredExits[1] + ", " + requiredExits[2] + ", " + requiredExits[3]);
+
         foreach (var room in roomsPool)
         {
-            if (zoneIndex == -1 && !room.activeSelf) {
+            if (zoneIndex == DeadEndZoneType && !room.GetComponent<RoomManager>().isUsed)
+            {
                 availableRoomsPool.Add(room);
                 continue;
             }
-            
+
             if (!room.GetComponent<RoomManager>().isUsed && CheckRoomCompatibility(room, requiredExits, minNumExits))
             {
                 availableRoomsPool.Add(room);
@@ -328,11 +489,14 @@ public class SpawnRoomManager : MonoBehaviour
     private bool CheckRoomCompatibility(GameObject room, int[] requiredExits, int minNumExits)
     {
         var exits = room.GetComponent<RoomManager>().exitsFromRoom;
-        
+
         for (int rotation = 0; rotation < DirectionsCount; rotation++)
         {
             if (CheckExitsMatch(exits, rotation, requiredExits, minNumExits))
+            {
+                // Debug.Log("Exits: " + exits[0] + ", " + exits[1] + ", " + exits[2] + ", " + exits[3]);
                 return true;
+            }
         }
         return false;
     }
@@ -381,36 +545,44 @@ public class SpawnRoomManager : MonoBehaviour
         };
     }
 
-    protected int[] CheckRequiredRoomType(Vector2 position)
+    protected int[] CheckRequiredRoomType(Vector3 worldPos, int indexCheckedZone)
     {
         var requiredRoomType = new int[DirectionsCount];
-        
-        foreach (Direction direction in System.Enum.GetValues(typeof(Direction)))
+        for (int direction = 0; direction < DirectionsCount; direction++)
         {
-            requiredRoomType[(int)direction] = GetExitRequirement(position, direction);
+            requiredRoomType[direction] = GetExitRequirement(worldPos, (Direction)direction, indexCheckedZone);
         }
         
         return requiredRoomType;
     }
 
-    protected int GetExitRequirement(Vector2 position, Direction direction)
+    protected int GetExitRequirement(Vector3 worldPos, Direction direction, int indexCheckedZone)
     {
-        var adjacentPos = GetAdjacentPosition(position, direction);
-        var (isGetValue, data) = TryGetRoomData(adjacentPos);
-        if (!isGetValue)
+        var adjacentWorldPos = GetAdjacentPosition(worldPos, direction);
+        // Debug.Log("Adj room pos    : " + adjacentWorldPos.x + ", " + adjacentWorldPos.y + ", " + adjacentWorldPos.z);
+        if (!TryGetRoomData(adjacentWorldPos, out RoomData roomData))
+        {
             return 0;
+        }
 
-        var adjacentRoomManager = 
-            data.RoomObject.TryGetComponent(out TransitionRoomManager transitionRoomManager) 
-            ? transitionRoomManager : data.RoomObject.GetComponent<RoomManager>();
-        var oppositeDirection = GetOppositeDirection(position - adjacentPos);
+        var adjacentRoomManager = roomData.RoomObject.GetComponent<RoomManager>();
+        var oppositeDirection = GetOppositeDirection(new Vector2(worldPos.x - adjacentWorldPos.x, worldPos.z - adjacentWorldPos.z) / _roomSize);
         
-        return adjacentRoomManager.exitsFromRoom[(int)oppositeDirection] ? 1 : -1;
+        // return adjacentRoomManager.exitsFromRoom[(int)oppositeDirection] ? 1 : -1;
+        var returningValue = adjacentRoomManager.exitsFromRoom[(int)oppositeDirection] ? 1 : -1;
+        return (returningValue != -1
+                && adjacentRoomManager.zoneType != indexCheckedZone
+                && !adjacentRoomManager.IsRoomTransitional) 
+            ? -2 : returningValue;
     }
 
-    protected virtual (bool, RoomData) TryGetRoomData(Vector2 pos) {
-        bool isGetValue = _spawnedRooms.TryGetValue(pos, out RoomData data);
-        return (isGetValue, data);
+    // В SpawnNewZoneManager мы override эту функцию, пытаемся получить значение не только
+    // из _spawnedRoomsData, но и из _newSpawnedRooms
+    protected virtual bool TryGetRoomData(Vector3 worldPos, out RoomData data) {
+        bool isGetValue = _spawnedRoomsData.TryGetValue(worldPos / _roomSize, out RoomData roomData);
+        data = roomData;
+        
+        return isGetValue;
     }
 
     protected Direction GetOppositeDirection(Vector2 offset) => offset switch
@@ -418,86 +590,94 @@ public class SpawnRoomManager : MonoBehaviour
         { y: -1 } => Direction.East,
         { y: 1 } => Direction.West,
         { x: 1 } => Direction.North,
-        { x: -1 } => Direction.South,
+        { x: -1 } => Direction.South
     };
 
-    protected Vector2 GetAdjacentPosition(Vector2 position, Direction direction) {
-        return position + GetDirectionOffset(direction);
+    protected Vector3 GetAdjacentPosition(Vector3 worldPos, Direction direction) {
+        return worldPos + GetDirectionOffset(direction) * _roomSize;
     }
 
-    protected int CalculateMinNumRequiredExits(int zoneType) {
-        if (zoneType == -1)
+    protected virtual int CalculateMinNumRequiredExits(int zoneType) {
+        if (zoneType == DeadEndZoneType)
             return 1;
-        return (CountZoneRoomsExits > 1 || countImportantZoneRooms[zoneType] < 2) ? 1 : 2;
+        return (CountZoneRoomsExits > 2) ? 1 : 2;
     }
 
-    private bool RoomExists(Vector2 position) {
-        var (isRoomGet, roomData) = TryGetRoomData(position);
-        if (!isRoomGet) {return isRoomGet;}
-
+    private bool RoomExists(Vector3 worldPos) {
+        if (!TryGetRoomData(worldPos, out RoomData roomData)) {
+            return false;
+        }
+        
         GameObject room = roomData.RoomObject;
 
         room.transform.SetPositionAndRotation(
-            new Vector3(position.x * 25, 0, position.y * 25),
+            worldPos,
             Quaternion.Euler(0, roomData.RotationY, 0)
         );
+
         room.SetActive(true);
         RoomManager roomManager = room.GetComponent<RoomManager>(); 
         roomManager.isUsed = true;
-        roomManager._2DWorldPos = position;
+        roomManager.LocalPos = new Vector3(worldPos.x , worldPos.y , worldPos.z) / _roomSize;
 
-        return isRoomGet;
+        if (roomManager.zoneType == DeadEndZoneType)
+        {
+            Debug.Log("Get DeadEndRoom from Pool");
+        }
+
+        return true;
     }
 
-    protected (Vector3, Vector2) CalculateAdjacentPosition(Vector2 parentRoomPosition, Direction direction) {
+    protected Vector3 CalculateAdjacentPosition(Vector3 parentRoomPosition, Direction direction) {
         var offset = GetDirectionOffset(direction);
-        var position2D = parentRoomPosition + offset;
-        var position3D = new Vector3(
-            position2D.x * _roomSize, 
-            0, 
-            position2D.y * _roomSize
+        var worldPos = new Vector3(
+            (parentRoomPosition.x + offset.x) * _roomSize, 
+            (parentRoomPosition.y + offset.y) * _roomSize, 
+            (parentRoomPosition.z + offset.z) * _roomSize
         );
         
-        return (position3D, position2D);
+        return worldPos;
     }
 
-    private Vector2 GetDirectionOffset(Direction direction) => direction switch {
-        Direction.North => Vector2.right,
-        Direction.East => Vector2.down,
-        Direction.South => Vector2.left,
-        Direction.West => Vector2.up,
-        _ => Vector2.zero
+    private Vector3 GetDirectionOffset(Direction direction) => direction switch {
+        Direction.North => Vector3.right,
+        Direction.East => Vector3.back,
+        Direction.South => Vector3.left,
+        Direction.West => Vector3.forward,
+        Direction.Up => Vector3.up,
+        Direction.Down => Vector3.down,
+        // _ => Vector3.zero
     };
 
-    public void DespawnOldAdjacentRooms(Vector2 oldPlayerPos, Vector2 newPlayerPos)
+    public void DespawnOldAdjacentRooms(Vector3 oldPlayerPos, Vector3 newPlayerPos)
     {
-        Vector2 playerPosChangeValue = newPlayerPos - oldPlayerPos;
+        Vector3 playerPosChangeValue = newPlayerPos - oldPlayerPos;
 
-        foreach (Direction direction in System.Enum.GetValues(typeof(Direction)))
+        for (int direction = 0; direction < DirectionsCount + AdditionalDirCount; direction++)
         {
-            Vector2 direction2D = GetDirectionOffset(direction);
-            if (direction2D == playerPosChangeValue) {
+            Vector3 dirVector = GetDirectionOffset((Direction)direction);
+            if (dirVector == playerPosChangeValue)
+            {
                 continue;
             }
-            Vector2 adjacentRoomPos2D = oldPlayerPos + direction2D;
-            
-            TryDespawnRoom(adjacentRoomPos2D);
+            Vector3 adjacentRoomPos = oldPlayerPos + dirVector;
+
+            TryDespawnRoom(adjacentRoomPos);
         }
     }
 
-    private void TryDespawnRoom(Vector2 roomPos2D) {
-        if (!_spawnedRooms.ContainsKey(roomPos2D)) {
+    private void TryDespawnRoom(Vector3 roomPos) {
+        if (!TryGetRoomData(roomPos * _roomSize, out RoomData roomData)) {
+            // Debug.Log("Cant despawnRoom! Pos: [" + roomPos.x + ", " + roomPos.y + ", " + roomPos.z + "]");
             return;
         }
-        _spawnedRooms.TryGetValue(roomPos2D, out RoomData roomData);
+        Debug.Log("DespawnRoom on Pos: [" + roomPos.x + ", " + roomPos.y + ", " + roomPos.z + "]");
         GameObject adjacentRoom = roomData.RoomObject;
-        var roomManager = 
-            adjacentRoom.TryGetComponent(out TransitionRoomManager transitionRoomManager) 
-            ? transitionRoomManager : adjacentRoom.GetComponent<RoomManager>();
+        var roomManager = adjacentRoom.GetComponent<RoomManager>();
 
         if (roomManager.canUsedInfinitely && 
-                (_gameRuleManager.IsInfinityGame || 
-                roomManager.AvailableForNextPoolRooms.AsEnumerable().Last())) {
+                (_gameRuleManager.IsInfinityGame
+                || roomManager.zoneType == DeadEndZoneType)) {
             roomManager.isUsed = false;
         }
         adjacentRoom.SetActive(false);
