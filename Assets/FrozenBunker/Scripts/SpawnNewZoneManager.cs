@@ -34,14 +34,14 @@ public class SpawnNewZoneManager : SpawnRoomManager
 
         if (indexNewZone == -1) {return false;}
 
-        foreach (Direction consideringDir in System.Enum.GetValues(typeof(Direction)))
+        for (int dir = 0; dir < XOZDirectionsCount; dir++)
         {
             var (newPos3D, newPos2D) = CalculateAdjacentPosition(
                 roomManager._2DWorldPos, 
-                consideringDir
+                (Direction)dir
             );
 
-            if (ShouldSkipPosition(newPos2D, oldPos, roomManager.exitsFromRoom[(int)consideringDir])) 
+            if (ShouldSkipPosition(newPos2D, oldPos, roomManager.exitsFromRoom[dir])) 
                 continue;
 
             ProcessRoomCreation(indexNewZone, newPos3D, newPos2D, roomManager);
@@ -103,11 +103,11 @@ public class SpawnNewZoneManager : SpawnRoomManager
 
     protected int[] CheckRequiredRoomType(Vector2 position, int indexCheckedZone)
     {
-        var requiredRoomType = new int[DirectionsCount];
+        var requiredRoomType = new int[XOZDirectionsCount];
         
-        foreach (Direction direction in System.Enum.GetValues(typeof(Direction)))
+        for (int i = 0; i < XOZDirectionsCount; i++)
         {
-            requiredRoomType[(int)direction] = GetExitRequirement(position, direction, indexCheckedZone);
+            requiredRoomType[i] = GetExitRequirement(position, (Direction)i, indexCheckedZone);
         }
         
         return requiredRoomType;

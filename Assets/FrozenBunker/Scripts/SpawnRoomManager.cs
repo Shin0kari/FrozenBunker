@@ -7,7 +7,9 @@ public enum Direction
     North = 0,
     East = 1,
     South = 2,
-    West = 3
+    West = 3,
+    Up = 4,
+    Down = 5
 }
 
 public class RoomData
@@ -34,7 +36,9 @@ public class SpawnRoomManager : MonoBehaviour
     public Dictionary<Vector2, RoomData> _spawnedRooms = new();
     
     private const float RotationStep = 90f;
-    protected const int DirectionsCount = 4;
+    protected const int XOZDirectionsCount = 4;
+    protected const int OYDirectionsCount = 2;
+
     protected const int DeadEndZoneType = -1;
 
     private void Start() {
@@ -138,7 +142,7 @@ public class SpawnRoomManager : MonoBehaviour
 
     protected void UpdateAvailableExitsCount(bool[] exits, bool isStartRoom = false) {
         // Базовое количество добавляемых выходов (4 для стартовой комнаты, 3 для обычной)
-        int baseExitsToAdd = isStartRoom ? DirectionsCount : 3;
+        int baseExitsToAdd = isStartRoom ? XOZDirectionsCount : 3;
         
         // Подсчет стен без выходов
         int wallsWithoutExits = 0;
@@ -163,7 +167,7 @@ public class SpawnRoomManager : MonoBehaviour
     }
 
     private (Quaternion, int) GetRandomRotationAndDirection() {
-        int randomIndex = Random.Range(0, DirectionsCount);
+        int randomIndex = Random.Range(0, XOZDirectionsCount);
         return (GetRotationFromSteps(randomIndex), randomIndex);
     }
 
@@ -258,7 +262,7 @@ public class SpawnRoomManager : MonoBehaviour
 
         if (availableRooms.Count == 0)
         {
-            availableRooms = FilterRoomsPoolByExits(DeadEndZoneType, new int[DirectionsCount], minNumExits);
+            availableRooms = FilterRoomsPoolByExits(DeadEndZoneType, new int[XOZDirectionsCount], minNumExits);
         }
 
         var selectedRoom = GetRandomRoomFromPool(availableRooms);
@@ -294,7 +298,7 @@ public class SpawnRoomManager : MonoBehaviour
     {
         var validRotations = new List<int>();
         
-        for (int rotation = 0; rotation < DirectionsCount; rotation++)
+        for (int rotation = 0; rotation < XOZDirectionsCount; rotation++)
         {
             if (CheckExitsMatch(roomExits, rotation, requiredExits))
             {
@@ -329,7 +333,7 @@ public class SpawnRoomManager : MonoBehaviour
     {
         var exits = room.GetComponent<RoomManager>().exitsFromRoom;
         
-        for (int rotation = 0; rotation < DirectionsCount; rotation++)
+        for (int rotation = 0; rotation < XOZDirectionsCount; rotation++)
         {
             if (CheckExitsMatch(exits, rotation, requiredExits, minNumExits))
                 return true;
@@ -341,7 +345,7 @@ public class SpawnRoomManager : MonoBehaviour
         int exitCount = 0;
         bool meetsRequirements = true;
 
-        for (int direction = 0; direction < DirectionsCount; direction++)
+        for (int direction = 0; direction < XOZDirectionsCount; direction++)
         {
             int requirement = requiredRoomType[direction];
             bool hasExit = GetRotatedExit(roomExits, direction, rotation);
@@ -363,7 +367,7 @@ public class SpawnRoomManager : MonoBehaviour
     /// </summary>
     private bool GetRotatedExit(bool[] roomExits, int direction, int rotation)
     {
-        int rotatedDirection = (direction + (DirectionsCount - rotation)) % DirectionsCount;
+        int rotatedDirection = (direction + (XOZDirectionsCount - rotation)) % XOZDirectionsCount;
         return roomExits[rotatedDirection];
     }
 
@@ -383,11 +387,11 @@ public class SpawnRoomManager : MonoBehaviour
 
     protected int[] CheckRequiredRoomType(Vector2 position)
     {
-        var requiredRoomType = new int[DirectionsCount];
+        var requiredRoomType = new int[XOZDirectionsCount];
         
-        foreach (Direction direction in System.Enum.GetValues(typeof(Direction)))
+        for (int i = 0; i < XOZDirectionsCount; i++)
         {
-            requiredRoomType[(int)direction] = GetExitRequirement(position, direction);
+            requiredRoomType[i] = GetExitRequirement(position, (Direction)i);
         }
         
         return requiredRoomType;
@@ -466,16 +470,16 @@ public class SpawnRoomManager : MonoBehaviour
         Direction.East => Vector2.down,
         Direction.South => Vector2.left,
         Direction.West => Vector2.up,
-        _ => Vector2.zero
+        _ => Vector2.right
     };
 
     public void DespawnOldAdjacentRooms(Vector2 oldPlayerPos, Vector2 newPlayerPos)
     {
         Vector2 playerPosChangeValue = newPlayerPos - oldPlayerPos;
 
-        foreach (Direction direction in System.Enum.GetValues(typeof(Direction)))
+        for (int i = 0; i < XOZDirectionsCount + OYDirectionsCount; i++)
         {
-            Vector2 direction2D = GetDirectionOffset(direction);
+            Vector2 direction2D = GetDirectionOffset((Direction)i);
             if (direction2D == playerPosChangeValue) {
                 continue;
             }
