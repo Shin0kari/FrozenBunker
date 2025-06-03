@@ -10,7 +10,6 @@ public class RoomManager : MonoBehaviour
     [SerializeField] private bool isImportantRoom = false;
     [SerializeField] private bool isRoomTransitional = false;
     [SerializeField] private bool[] availableForNextPoolRooms = new bool[11];
-    [SerializeField] private Vector2 worldPos2D = new(0, 0);
     private SpawnRoomManager spawnRoomManager;
 
     // zoneType определяется как index пула из которого берётся комната.
@@ -28,7 +27,6 @@ public class RoomManager : MonoBehaviour
     public bool IsImportantRoom                 { get { return isImportantRoom; } }
     public bool IsRoomTransitional              { get { return isRoomTransitional; } }
     public bool[] AvailableForNextPoolRooms     { get { return availableForNextPoolRooms; } }
-    public Vector2 _2DWorldPos                  { get { return worldPos2D; } set { worldPos2D = value; } }
     public SpawnRoomManager SpawnRoomManager    { set { spawnRoomManager = value; } }
 
     protected virtual void OnTriggerEnter(Collider other)
@@ -36,16 +34,17 @@ public class RoomManager : MonoBehaviour
         if (other.CompareTag("Player"))
         {
             PlayerController playerController = other.GetComponent<PlayerController>();
+            var worldPos = gameObject.GetComponent<Transform>().position;
             // spawnRoomManager.DespawnOldAdjacentRooms(playerController.PlayerPos, _2DWorldPos);
             // playerController.PlayerPos = _2DWorldPos;
 
             if (!gameObject.TryGetComponent<DeadEndRoomManager>(out DeadEndRoomManager _component))
             {
-                spawnRoomManager.DespawnOldAdjacentRooms(playerController.PlayerPos, _2DWorldPos);
+                spawnRoomManager.DespawnOldAdjacentRooms(playerController.PlayerPos, worldPos);
                 spawnRoomManager.SpawnAdjacentRooms(gameObject);
             }
             
-            playerController.PlayerPos = _2DWorldPos;
+            playerController.PlayerPos = worldPos;
         }
     }
 }

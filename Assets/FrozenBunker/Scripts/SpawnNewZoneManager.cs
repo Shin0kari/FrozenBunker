@@ -7,7 +7,7 @@ using UnityEngine;
 public class SpawnNewZoneManager : SpawnRoomManager
 {
     private int countStartedImportantRooms;
-    private Dictionary<Vector2, RoomData> _newSpawnedRooms;
+    private Dictionary<Vector3, RoomData> _newSpawnedRooms;
     public PlayerController playerController; // изменить тип безопасности
 
     private void Start() {
@@ -20,7 +20,7 @@ public class SpawnNewZoneManager : SpawnRoomManager
         countImportantZoneRooms[indexNewZone] += 1;
     }
 
-    public (bool, Dictionary<Vector2, RoomData>) TryToGenerateNewZone(GameObject transitionRoom, Vector2 oldPlayerPos) {
+    public (bool, Dictionary<Vector3, RoomData>) TryToGenerateNewZone(GameObject transitionRoom, Vector3 oldPlayerPos) {
         _newSpawnedRooms = new();
         countStartedImportantRooms = 
             countImportantZoneRooms[transitionRoom.GetComponent<TransitionRoomManager>().TransitionToZone]; // new
@@ -28,23 +28,25 @@ public class SpawnNewZoneManager : SpawnRoomManager
         return (isNewZoneGenerated, _newSpawnedRooms);
     }
 
-    private bool RecursiveZoneGeneration(GameObject parentRoom, Vector2 oldPos) {
+    // !!! имеется баг !!! почему то имеет возможность в новой зоне заспавнить одну и ту же DeadEndRoom
+    private bool RecursiveZoneGeneration(GameObject parentRoom, Vector3 oldPos)
+    {
         var roomManager = parentRoom.GetComponent<RoomManager>();
         var indexNewZone = TryGetIndex(parentRoom);
 
-        if (indexNewZone == -1) {return false;}
+        if (indexNewZone == -1) { return false; }
 
         for (int dir = 0; dir < GameEnums.XOZDirectionsCount; dir++)
         {
-            var (newPos3D, newPos2D) = CalculateAdjacentPosition(
-                roomManager._2DWorldPos, 
+            var newWorldPos = GetAdjacentPosition(
+                parentRoom.transform.position,
                 (GameEnums.Direction)dir
             );
 
-            if (ShouldSkipPosition(newPos2D, oldPos, roomManager.exitsFromRoom[dir])) 
+            if (ShouldSkipPosition(newWorldPos, oldPos, roomManager.exitsFromRoom[dir]))
                 continue;
 
-            ProcessRoomCreation(indexNewZone, newPos3D, newPos2D, roomManager);
+            ProcessRoomCreation(indexNewZone, newWorldPos, roomManager);
         }
 
         return countStartedImportantRooms != countImportantZoneRooms[indexNewZone];
@@ -59,39 +61,38 @@ public class SpawnNewZoneManager : SpawnRoomManager
         }
     }
 
-    private void ProcessRoomCreation(int zoneType, Vector3 position3D, Vector2 position2D, RoomManager parentManager) {
-        var newRoom = CreateAdjacentRoomFromPool(position3D, position2D, zoneType);
+    private void ProcessRoomCreation(int zoneType, Vector3 worldPos, RoomManager parentManager) {
+        var newRoom = CreateAdjacentRoomFromPool(worldPos, zoneType);
 
-        RecursiveZoneGeneration(newRoom, parentManager._2DWorldPos);
+        RecursiveZoneGeneration(newRoom, worldPos);
     }
 
     // POLYMORPHISM
-    protected override void ChangeSettingsInRoomManager(GameObject room, Vector2 _2DWorldPos, Vector3 worldPos, Quaternion rotation, bool isUsed)
+    protected override void ChangeSettingsInRoomManager(GameObject room, Vector3 worldPos, Quaternion rotation, bool isUsed)
     {
         room.transform.SetPositionAndRotation(worldPos, rotation);
 
         var roomManager = room.GetComponent<RoomManager>();
 
         UsingRoom(roomManager, isUsed);
-        roomManager._2DWorldPos = _2DWorldPos;
 
         UpdateAvailableExitsCount(roomManager.exitsFromRoom);
     }
 
-    protected override void AddDataToSpawnedRoom(Vector2 _2DWorldPos, RoomData newRoomData)
+    protected override void AddDataToSpawnedRoom(Vector3 worldPos, RoomData newRoomData)
     {
-        _newSpawnedRooms.Add(_2DWorldPos, newRoomData);
+        _newSpawnedRooms.Add(worldPos, newRoomData);
     }
 
-    protected int GetExitRequirement(Vector2 position, GameEnums.Direction direction, int indexCheckedZone)
+    protected int GetExitRequirement(Vector3 worldPos, GameEnums.Direction direction, int indexCheckedZone)
     {
-        var adjacentPos = GetAdjacentPosition(position, direction);
+        var adjacentPos = GetAdjacentPosition(worldPos, direction);
         var (isGetValue, data) = TryGetRoomData(adjacentPos);
         if (!isGetValue)
             return 0;
 
         var adjacentRoomManager = data.RoomObject.GetComponent<RoomManager>();
-        var oppositeDirection = GetOppositeDirection(position - adjacentPos);
+        var oppositeDirection = GetDirectionFromOffset(worldPos - adjacentPos);
         
         
         var returningValue = adjacentRoomManager.exitsFromRoom[(int)oppositeDirection] ? 1 : -1;
@@ -101,31 +102,30 @@ public class SpawnNewZoneManager : SpawnRoomManager
             ? -2 : returningValue;
     }
 
-    protected int[] CheckRequiredRoomType(Vector2 position, int indexCheckedZone)
+    protected int[] CheckRequiredRoomType(Vector3 worldPos, int indexCheckedZone)
     {
         var requiredRoomType = new int[GameEnums.XOZDirectionsCount];
         
         for (int i = 0; i < GameEnums.XOZDirectionsCount; i++)
         {
-            requiredRoomType[i] = GetExitRequirement(position, (GameEnums.Direction)i, indexCheckedZone);
+            requiredRoomType[i] = GetExitRequirement(worldPos, (GameEnums.Direction)i, indexCheckedZone);
         }
         
         return requiredRoomType;
     }
 
-    protected override (bool, RoomData) TryGetRoomData(Vector2 pos) {
-        bool isGetValue = _spawnedRooms.TryGetValue(
-            pos, out RoomData data) || 
-            _newSpawnedRooms.TryGetValue(pos, out data);
+    protected override (bool, RoomData) TryGetRoomData(Vector3 worldPos) {
+        bool isGetValue = _spawnedRooms.TryGetValue(worldPos, out RoomData data)
+            || _newSpawnedRooms.TryGetValue(worldPos, out data);
         return (isGetValue, data);
     }
 
 
-    private bool ShouldSkipPosition(Vector2 newPosition, Vector2 oldPlayerPos, bool hasExit)
+    private bool ShouldSkipPosition(Vector3 newWorldPos, Vector3 oldPlayerPos, bool hasExit)
     {
         return !hasExit || 
-            newPosition == oldPlayerPos || 
-            _spawnedRooms.ContainsKey(newPosition) || 
-            _newSpawnedRooms.ContainsKey(newPosition);
+            newWorldPos == oldPlayerPos || 
+            _spawnedRooms.ContainsKey(newWorldPos) || 
+            _newSpawnedRooms.ContainsKey(newWorldPos);
     }
 }
