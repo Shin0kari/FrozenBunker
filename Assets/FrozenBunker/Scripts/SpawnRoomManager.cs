@@ -2,16 +2,6 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 
-public enum Direction
-{
-    North = 0,
-    East = 1,
-    South = 2,
-    West = 3,
-    Up = 4,
-    Down = 5
-}
-
 public class RoomData
 {
     public GameObject RoomObject;
@@ -26,27 +16,57 @@ public class SpawnRoomManager : MonoBehaviour
     protected RoomsPool _roomsPool;
 
     [Header("Settings")]
-    
-    [SerializeField] private Vector3 _startPosition = Vector3.zero;
-    [SerializeField] protected int[] countImportantZoneRooms = new int[10];
-    private int _totalZones = 10;
-    protected float _roomSize = 25f;
+    [SerializeField] protected int[] countImportantZoneRooms;
+    [SerializeField] private Vector3 _startPosition;
     protected int CountZoneRoomsExits;
 
     public Dictionary<Vector2, RoomData> _spawnedRooms = new();
-    
-    private const float RotationStep = 90f;
-    protected const int XOZDirectionsCount = 4;
-    protected const int OYDirectionsCount = 2;
-
-    protected const int DeadEndZoneType = -1;
 
     private void Start() {
-        _roomsPool = GetComponent<RoomsPool>();
-        SpawnStartingRoom(GetStartingZoneIndex());
+        InitializingStartData();
+        var startingZoneIndex = GetStartingZoneIndex();
+        var startingNumFloor = GetStartingNumFloor(startingZoneIndex);
+        var startingRoomPos = GetStartingPosition(startingNumFloor);
+        SpawnStartingRoom(startingZoneIndex, startingRoomPos);
     }
 
-    private void SpawnStartingRoom(int zoneIndex) {
+    private void InitializingStartData()
+    {
+        _roomsPool = GetComponent<RoomsPool>();
+        _startPosition = Vector3.up * GameEnums._roomSize;
+        // -1 тк DeadEndZoneType не имеет важных комнат
+        countImportantZoneRooms = new int[_roomsPool.GetCountPools - 1];
+    }
+
+    private int GetStartingNumFloor(int zoneIndex, bool random = false)
+    {
+        if (!random)
+        {
+            return GameEnums._startFloor;
+        }
+        var zoneFloorData = GameEnums.GetZoneFloorData;
+        if (random || zoneIndex != 0)
+        {
+            // !!! баг !!! Нужно сделать так, что если zoneIndex != 0 но не random, то нужно использовать бд о этажах и зонах
+            int[] matchingFloors = GameEnums.GetZoneFloorData
+                .Where(pair => pair.y == zoneIndex)
+                .Select(pair => pair.x)
+                .ToArray();
+
+            return matchingFloors[Random.Range(0, matchingFloors.Length)];
+        }
+        else
+        {
+            return GameEnums._startFloor;
+        }
+    }
+
+    private Vector3 GetStartingPosition(int numFloor) {
+        return new Vector3(_startPosition.x, _startPosition.y * numFloor, _startPosition.z);
+    }
+
+    private void SpawnStartingRoom(int zoneIndex, Vector3 startWorldPos)
+    {
         CountZoneRoomsExits = 0;
         var availableRooms = _roomsPool.GetPoolRooms(zoneIndex);
         var startingRooms = FilterStartingRooms(availableRooms);
@@ -59,9 +79,9 @@ public class SpawnRoomManager : MonoBehaviour
 
         var (rotation, direction) = GetRandomRotationAndDirection();
         var room = SpawnRoom(
-            startingRoom, 
-            _startPosition, 
-            rotation, 
+            startingRoom,
+            startWorldPos,
+            rotation,
             Vector2.zero
         );
 
@@ -84,10 +104,10 @@ public class SpawnRoomManager : MonoBehaviour
     private bool[] RotateExitsClockwise(bool[] exits) {
         return new[]
         {
-            exits[(int)Direction.West],
-            exits[(int)Direction.North],
-            exits[(int)Direction.East],
-            exits[(int)Direction.South]
+            exits[(int)GameEnums.Direction.West],
+            exits[(int)GameEnums.Direction.North],
+            exits[(int)GameEnums.Direction.East],
+            exits[(int)GameEnums.Direction.South]
         };
     }
 
@@ -142,7 +162,7 @@ public class SpawnRoomManager : MonoBehaviour
 
     protected void UpdateAvailableExitsCount(bool[] exits, bool isStartRoom = false) {
         // Базовое количество добавляемых выходов (4 для стартовой комнаты, 3 для обычной)
-        int baseExitsToAdd = isStartRoom ? XOZDirectionsCount : 3;
+        int baseExitsToAdd = isStartRoom ? GameEnums.XOZDirectionsCount : 3;
         
         // Подсчет стен без выходов
         int wallsWithoutExits = 0;
@@ -163,11 +183,11 @@ public class SpawnRoomManager : MonoBehaviour
 
     private Quaternion GetRotationFromSteps(int rotationSteps)
     {
-        return Quaternion.Euler(0, rotationSteps * RotationStep, 0);
+        return Quaternion.Euler(0, rotationSteps * GameEnums.RotationStep, 0);
     }
 
     private (Quaternion, int) GetRandomRotationAndDirection() {
-        int randomIndex = Random.Range(0, XOZDirectionsCount);
+        int randomIndex = Random.Range(0, GameEnums.XOZDirectionsCount);
         return (GetRotationFromSteps(randomIndex), randomIndex);
     }
 
@@ -180,7 +200,7 @@ public class SpawnRoomManager : MonoBehaviour
 
     private int GetStartingZoneIndex(bool random = false) {
         if (random) {
-            return Random.Range(0, _totalZones);
+            return Random.Range(0, _roomsPool.GetCountPools - 1);
         } else {
             return 0;
         }
@@ -195,7 +215,7 @@ public class SpawnRoomManager : MonoBehaviour
             if (!exits[i])
                 continue;
 
-            var direction = (Direction)i;
+            var direction = (GameEnums.Direction)i;
             var (newRoomPos3D, newRoomPos2D) = CalculateAdjacentPosition(
                 roomManager._2DWorldPos, 
                 direction
@@ -244,12 +264,12 @@ public class SpawnRoomManager : MonoBehaviour
         _transitionManager.isUsed = false;
         room.SetActive(false);
 
-        var deadEndRoom = _roomsPool.GetPoolRooms(DeadEndZoneType).GetRandom();
+        var deadEndRoom = _roomsPool.GetPoolRooms(GameEnums.DeadEndZoneType).GetRandom();
         var (rotation, _direction) = GetRandomRotationAndDirection();
         
         SpawnRoom(
             deadEndRoom, 
-            new Vector3(deadEndPosition2D.x * _roomSize, 0, deadEndPosition2D.y * _roomSize), 
+            new Vector3(deadEndPosition2D.x * GameEnums._roomSize, room.GetComponent<Transform>().position.y, deadEndPosition2D.y * GameEnums._roomSize), 
             rotation, 
             deadEndPosition2D
         );
@@ -262,7 +282,7 @@ public class SpawnRoomManager : MonoBehaviour
 
         if (availableRooms.Count == 0)
         {
-            availableRooms = FilterRoomsPoolByExits(DeadEndZoneType, new int[XOZDirectionsCount], minNumExits);
+            availableRooms = FilterRoomsPoolByExits(GameEnums.DeadEndZoneType, new int[GameEnums.XOZDirectionsCount], minNumExits);
         }
 
         var selectedRoom = GetRandomRoomFromPool(availableRooms);
@@ -298,7 +318,7 @@ public class SpawnRoomManager : MonoBehaviour
     {
         var validRotations = new List<int>();
         
-        for (int rotation = 0; rotation < XOZDirectionsCount; rotation++)
+        for (int rotation = 0; rotation < GameEnums.XOZDirectionsCount; rotation++)
         {
             if (CheckExitsMatch(roomExits, rotation, requiredExits))
             {
@@ -333,7 +353,7 @@ public class SpawnRoomManager : MonoBehaviour
     {
         var exits = room.GetComponent<RoomManager>().exitsFromRoom;
         
-        for (int rotation = 0; rotation < XOZDirectionsCount; rotation++)
+        for (int rotation = 0; rotation < GameEnums.XOZDirectionsCount; rotation++)
         {
             if (CheckExitsMatch(exits, rotation, requiredExits, minNumExits))
                 return true;
@@ -345,7 +365,7 @@ public class SpawnRoomManager : MonoBehaviour
         int exitCount = 0;
         bool meetsRequirements = true;
 
-        for (int direction = 0; direction < XOZDirectionsCount; direction++)
+        for (int direction = 0; direction < GameEnums.XOZDirectionsCount; direction++)
         {
             int requirement = requiredRoomType[direction];
             bool hasExit = GetRotatedExit(roomExits, direction, rotation);
@@ -367,7 +387,7 @@ public class SpawnRoomManager : MonoBehaviour
     /// </summary>
     private bool GetRotatedExit(bool[] roomExits, int direction, int rotation)
     {
-        int rotatedDirection = (direction + (XOZDirectionsCount - rotation)) % XOZDirectionsCount;
+        int rotatedDirection = (direction + (GameEnums.XOZDirectionsCount - rotation)) % GameEnums.XOZDirectionsCount;
         return roomExits[rotatedDirection];
     }
 
@@ -387,17 +407,17 @@ public class SpawnRoomManager : MonoBehaviour
 
     protected int[] CheckRequiredRoomType(Vector2 position)
     {
-        var requiredRoomType = new int[XOZDirectionsCount];
+        var requiredRoomType = new int[GameEnums.XOZDirectionsCount];
         
-        for (int i = 0; i < XOZDirectionsCount; i++)
+        for (int i = 0; i < GameEnums.XOZDirectionsCount; i++)
         {
-            requiredRoomType[i] = GetExitRequirement(position, (Direction)i);
+            requiredRoomType[i] = GetExitRequirement(position, (GameEnums.Direction)i);
         }
         
         return requiredRoomType;
     }
 
-    protected int GetExitRequirement(Vector2 position, Direction direction)
+    protected int GetExitRequirement(Vector2 position, GameEnums.Direction direction)
     {
         var adjacentPos = GetAdjacentPosition(position, direction);
         var (isGetValue, data) = TryGetRoomData(adjacentPos);
@@ -417,15 +437,15 @@ public class SpawnRoomManager : MonoBehaviour
         return (isGetValue, data);
     }
 
-    protected Direction GetOppositeDirection(Vector2 offset) => offset switch
+    protected GameEnums.Direction GetOppositeDirection(Vector2 offset) => offset switch
     {
-        { y: -1 } => Direction.East,
-        { y: 1 } => Direction.West,
-        { x: 1 } => Direction.North,
-        { x: -1 } => Direction.South,
+        { y: -1 } => GameEnums.Direction.East,
+        { y: 1 } => GameEnums.Direction.West,
+        { x: 1 } => GameEnums.Direction.North,
+        { x: -1 } => GameEnums.Direction.South,
     };
 
-    protected Vector2 GetAdjacentPosition(Vector2 position, Direction direction) {
+    protected Vector2 GetAdjacentPosition(Vector2 position, GameEnums.Direction direction) {
         return position + GetDirectionOffset(direction);
     }
 
@@ -442,7 +462,7 @@ public class SpawnRoomManager : MonoBehaviour
         GameObject room = roomData.RoomObject;
 
         room.transform.SetPositionAndRotation(
-            new Vector3(position.x * 25, 0, position.y * 25),
+            new Vector3(position.x * GameEnums._roomSize, GameEnums._startFloor, position.y * GameEnums._roomSize),
             Quaternion.Euler(0, roomData.RotationY, 0)
         );
         room.SetActive(true);
@@ -453,23 +473,23 @@ public class SpawnRoomManager : MonoBehaviour
         return isRoomGet;
     }
 
-    protected (Vector3, Vector2) CalculateAdjacentPosition(Vector2 parentRoomPosition, Direction direction) {
+    protected (Vector3, Vector2) CalculateAdjacentPosition(Vector2 parentRoomPosition, GameEnums.Direction direction) {
         var offset = GetDirectionOffset(direction);
         var position2D = parentRoomPosition + offset;
         var position3D = new Vector3(
-            position2D.x * _roomSize, 
-            0, 
-            position2D.y * _roomSize
+            position2D.x * GameEnums._roomSize, 
+            GameEnums._startFloor * GameEnums._roomSize, 
+            position2D.y * GameEnums._roomSize
         );
         
         return (position3D, position2D);
     }
 
-    private Vector2 GetDirectionOffset(Direction direction) => direction switch {
-        Direction.North => Vector2.right,
-        Direction.East => Vector2.down,
-        Direction.South => Vector2.left,
-        Direction.West => Vector2.up,
+    private Vector2 GetDirectionOffset(GameEnums.Direction direction) => direction switch {
+        GameEnums.Direction.North => Vector2.right,
+        GameEnums.Direction.East => Vector2.down,
+        GameEnums.Direction.South => Vector2.left,
+        GameEnums.Direction.West => Vector2.up,
         _ => Vector2.right
     };
 
@@ -477,9 +497,9 @@ public class SpawnRoomManager : MonoBehaviour
     {
         Vector2 playerPosChangeValue = newPlayerPos - oldPlayerPos;
 
-        for (int i = 0; i < XOZDirectionsCount + OYDirectionsCount; i++)
+        for (int i = 0; i < GameEnums.XOZDirectionsCount + GameEnums.OYDirectionsCount; i++)
         {
-            Vector2 direction2D = GetDirectionOffset((Direction)i);
+            Vector2 direction2D = GetDirectionOffset((GameEnums.Direction)i);
             if (direction2D == playerPosChangeValue) {
                 continue;
             }

@@ -285,15 +285,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: beef0cbfdc4be8e4c896ede5e355d2ba, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  canBeUsedAsStartingRoom: 0
+  isImportantRoom: 1
+  isRoomTransitional: 1
+  availableForNextPoolRooms: 0100000000000000000000
+  worldPos2D: {x: 0, y: 0}
+  zoneType: 0
   exitsFromRoom: 01000100
   canUsedInfinitely: 0
   isUsed: 0
-  canBeUsedAsStartingRoom: 0
-  availableForNextPoolRooms: 0100000000000000000000
-  worldPos2D: {x: 0, y: 0}
-  isImportantRoom: 1
-  isRoomTransitional: 1
-  zoneType: 0
   transitionToZone: 3
 --- !u!1 &8053228674742563476
 GameObject:

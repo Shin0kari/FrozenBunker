@@ -26,21 +26,29 @@ public class RoomsPool : MonoBehaviour
 
     [SerializeField] private List<GameObject> poolDeadEndRooms = new();
 
-    void Awake() {
+    [SerializeField] private int countPools;
+    public int GetCountPools { get { return countPools; } }
+
+    void Awake()
+    {
         // ABSTRACTION
         InitializingZoneDataFromPrefabs();
     }
 
-    private void InitializingZoneDataFromPrefabs() {
-        bool[] availableForNextPoolRooms;
+    private void InitializingZoneDataFromPrefabs()
+    {
         GameObject room;
         RoomManager roomManager;
+        bool[] availableForNextPoolRooms;
 
-        foreach (var roomPrefab in roomPrefabs) {
+        foreach (var roomPrefab in roomPrefabs)
+        {
             availableForNextPoolRooms = roomPrefab.GetComponent<RoomManager>().AvailableForNextPoolRooms;
-            
-            for (int zoneType = 0; zoneType < availableForNextPoolRooms.Length; zoneType++) {
-                if (!availableForNextPoolRooms[zoneType]) {
+
+            for (int zoneType = 0; zoneType < availableForNextPoolRooms.Length; zoneType++)
+            {
+                if (!availableForNextPoolRooms[zoneType])
+                {
                     continue;
                 }
 
@@ -49,14 +57,15 @@ public class RoomsPool : MonoBehaviour
                 room.SetActive(false);
                 roomManager = room.GetComponent<RoomManager>();
 
-                switch (zoneType) {
+                switch (zoneType)
+                {
                     case var type when type == 3 || type == 6 || type == 8:
                         roomManager.zoneType = zoneType;
                         room.AddComponent<NewZoneRoomManager>();
                         room.GetComponentInChildren<ChangeZoneColor>().ChangeColor(roomManager.zoneType);
                         break;
                     case var type when type == availableForNextPoolRooms.Length - 1:
-                        roomManager.zoneType = -1;
+                        roomManager.zoneType = GameEnums.DeadEndZoneType;
                         room.AddComponent<DeadEndRoomManager>();
                         break;
                     default:
@@ -68,14 +77,18 @@ public class RoomsPool : MonoBehaviour
                 GetComponent<SpawnNewZoneManager>().AddImportantRoomToCounter(zoneType);
             }
         }
+
+        countPools = roomPrefabs[0].GetComponent<RoomManager>().AvailableForNextPoolRooms.Length;
     }
 
-    private void AddingRoomInZonePool(GameObject room, RoomManager roomManager, int zoneType) {
+    private void AddingRoomInZonePool(GameObject room, RoomManager roomManager, int zoneType)
+    {
         roomManager.SpawnRoomManager = GetComponent<SpawnRoomManager>();
         GetPoolRooms(zoneType).Add(room);
     }
 
-    public List<GameObject> GetPoolRooms(int index) {
+    public List<GameObject> GetPoolRooms(int index)
+    {
         return index switch
         {
             0 => poolCommonAreaRooms,

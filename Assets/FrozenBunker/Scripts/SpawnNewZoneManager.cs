@@ -6,7 +6,7 @@ using UnityEngine;
 [RequireComponent(typeof(SpawnRoomManager))]
 public class SpawnNewZoneManager : SpawnRoomManager
 {
-    private int countStartedImportantRooms = -1;
+    private int countStartedImportantRooms;
     private Dictionary<Vector2, RoomData> _newSpawnedRooms;
     public PlayerController playerController; // изменить тип безопасности
 
@@ -34,11 +34,11 @@ public class SpawnNewZoneManager : SpawnRoomManager
 
         if (indexNewZone == -1) {return false;}
 
-        for (int dir = 0; dir < XOZDirectionsCount; dir++)
+        for (int dir = 0; dir < GameEnums.XOZDirectionsCount; dir++)
         {
             var (newPos3D, newPos2D) = CalculateAdjacentPosition(
                 roomManager._2DWorldPos, 
-                (Direction)dir
+                (GameEnums.Direction)dir
             );
 
             if (ShouldSkipPosition(newPos2D, oldPos, roomManager.exitsFromRoom[dir])) 
@@ -83,7 +83,7 @@ public class SpawnNewZoneManager : SpawnRoomManager
         _newSpawnedRooms.Add(_2DWorldPos, newRoomData);
     }
 
-    protected int GetExitRequirement(Vector2 position, Direction direction, int indexCheckedZone)
+    protected int GetExitRequirement(Vector2 position, GameEnums.Direction direction, int indexCheckedZone)
     {
         var adjacentPos = GetAdjacentPosition(position, direction);
         var (isGetValue, data) = TryGetRoomData(adjacentPos);
@@ -103,11 +103,11 @@ public class SpawnNewZoneManager : SpawnRoomManager
 
     protected int[] CheckRequiredRoomType(Vector2 position, int indexCheckedZone)
     {
-        var requiredRoomType = new int[XOZDirectionsCount];
+        var requiredRoomType = new int[GameEnums.XOZDirectionsCount];
         
-        for (int i = 0; i < XOZDirectionsCount; i++)
+        for (int i = 0; i < GameEnums.XOZDirectionsCount; i++)
         {
-            requiredRoomType[i] = GetExitRequirement(position, (Direction)i, indexCheckedZone);
+            requiredRoomType[i] = GetExitRequirement(position, (GameEnums.Direction)i, indexCheckedZone);
         }
         
         return requiredRoomType;

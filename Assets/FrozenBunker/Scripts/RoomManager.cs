@@ -24,22 +24,28 @@ public class RoomManager : MonoBehaviour
     public bool isUsed;
 
     // ENCAPSULATION
-    public bool CanBeUsedAsStartingRoom { get { return canBeUsedAsStartingRoom; } }
-    public bool IsImportantRoom { get { return isImportantRoom; } }
-    public bool IsRoomTransitional { get { return isRoomTransitional; } }
-    public bool[] AvailableForNextPoolRooms { get { return availableForNextPoolRooms; } }
-    public Vector2 _2DWorldPos { get { return worldPos2D; } set { worldPos2D = value; } }
-    public SpawnRoomManager SpawnRoomManager { set { spawnRoomManager = value; } }
+    public bool CanBeUsedAsStartingRoom         { get { return canBeUsedAsStartingRoom; } }
+    public bool IsImportantRoom                 { get { return isImportantRoom; } }
+    public bool IsRoomTransitional              { get { return isRoomTransitional; } }
+    public bool[] AvailableForNextPoolRooms     { get { return availableForNextPoolRooms; } }
+    public Vector2 _2DWorldPos                  { get { return worldPos2D; } set { worldPos2D = value; } }
+    public SpawnRoomManager SpawnRoomManager    { set { spawnRoomManager = value; } }
 
     protected virtual void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("Player")) {
+        if (other.CompareTag("Player"))
+        {
             PlayerController playerController = other.GetComponent<PlayerController>();
-            spawnRoomManager.DespawnOldAdjacentRooms(playerController.PlayerPos, _2DWorldPos);
-            playerController.PlayerPos = _2DWorldPos;
+            // spawnRoomManager.DespawnOldAdjacentRooms(playerController.PlayerPos, _2DWorldPos);
+            // playerController.PlayerPos = _2DWorldPos;
 
-            if (!gameObject.TryGetComponent<DeadEndRoomManager>(out DeadEndRoomManager _component)) 
-                {spawnRoomManager.SpawnAdjacentRooms(gameObject);}
+            if (!gameObject.TryGetComponent<DeadEndRoomManager>(out DeadEndRoomManager _component))
+            {
+                spawnRoomManager.DespawnOldAdjacentRooms(playerController.PlayerPos, _2DWorldPos);
+                spawnRoomManager.SpawnAdjacentRooms(gameObject);
+            }
+            
+            playerController.PlayerPos = _2DWorldPos;
         }
     }
 }
