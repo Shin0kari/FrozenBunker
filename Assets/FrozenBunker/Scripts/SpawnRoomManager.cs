@@ -30,7 +30,7 @@ public class SpawnRoomManager : MonoBehaviour
         SpawnStartingRoom(startingZoneIndex, startingRoomPos);
     }
 
-    private void InitializingStartData()
+    protected virtual void InitializingStartData()
     {
         _roomsPool = GetComponent<RoomsPool>();
         _startPosition = Vector3.up * GameEnums._roomSize;
@@ -131,7 +131,7 @@ public class SpawnRoomManager : MonoBehaviour
         return room;
     }
 
-    protected virtual void AddDataToSpawnedRoom(Vector3 worldPos, RoomData newRoomData) {
+    private void AddDataToSpawnedRoom(Vector3 worldPos, RoomData newRoomData) {
         _spawnedRooms.Add(worldPos, newRoomData);
     }
 
@@ -267,7 +267,7 @@ public class SpawnRoomManager : MonoBehaviour
         );
     }
 
-    protected GameObject CreateAdjacentRoomFromPool(Vector3 worldPos, int zoneType) {
+    protected virtual GameObject CreateAdjacentRoomFromPool(Vector3 worldPos, int zoneType) {
         var minNumExits = CalculateMinNumRequiredExits(zoneType);
         var requiredExits = CheckRequiredRoomType(worldPos);
         var availableRooms = FilterRoomsPoolByExits(zoneType, requiredExits, minNumExits);
@@ -322,7 +322,7 @@ public class SpawnRoomManager : MonoBehaviour
     }
 
     // !!! имеется баг !!! почему то имеет возможность в новой зоне заспавнить одну и ту же DeadEndRoom
-    protected List<GameObject> FilterRoomsPoolByExits(int zoneIndex, int[] requiredExits, int minNumExits)
+    private List<GameObject> FilterRoomsPoolByExits(int zoneIndex, int[] requiredExits, int minNumExits)
     {
         var roomsPool = _roomsPool.GetPoolRooms(zoneIndex);
         var availableRoomsPool = new List<GameObject>();
@@ -330,13 +330,12 @@ public class SpawnRoomManager : MonoBehaviour
         foreach (var room in roomsPool)
         {
             var roomManager = room.GetComponent<RoomManager>();
-            if (zoneIndex == GameEnums.DeadEndZoneType && !roomManager.isUsed)
+            if (roomManager.isUsed)
             {
-                availableRoomsPool.Add(room);
                 continue;
             }
 
-            if (!roomManager.isUsed && CheckRoomCompatibility(room, requiredExits, minNumExits))
+            if (zoneIndex == GameEnums.DeadEndZoneType || CheckRoomCompatibility(room, requiredExits, minNumExits))
             {
                 availableRoomsPool.Add(room);
             }
@@ -344,7 +343,7 @@ public class SpawnRoomManager : MonoBehaviour
         return availableRoomsPool;
     }
 
-    private bool CheckRoomCompatibility(GameObject room, int[] requiredExits, int minNumExits)
+    protected bool CheckRoomCompatibility(GameObject room, int[] requiredExits, int minNumExits)
     {
         var exits = room.GetComponent<RoomManager>().exitsFromRoom;
         
@@ -400,7 +399,7 @@ public class SpawnRoomManager : MonoBehaviour
         };
     }
 
-    protected int[] CheckRequiredRoomType(Vector3 worldPos)
+    private int[] CheckRequiredRoomType(Vector3 worldPos)
     {
         var requiredRoomType = new int[GameEnums.XOZDirectionsCount];
         
@@ -412,7 +411,7 @@ public class SpawnRoomManager : MonoBehaviour
         return requiredRoomType;
     }
 
-    protected int GetExitRequirement(Vector3 worldPos, GameEnums.Direction direction)
+    private int GetExitRequirement(Vector3 worldPos, GameEnums.Direction direction)
     {
         var adjacentPos = GetAdjacentPosition(worldPos, direction);
         var (isGetValue, data) = TryGetRoomData(adjacentPos);
