@@ -16,9 +16,8 @@ public class SpawnRoomManager : MonoBehaviour
     protected RoomsPool _roomsPool;
 
     [Header("Settings")]
-    [SerializeField] protected int[] countImportantZoneRooms;
     [SerializeField] private Vector3 _startPosition;
-    protected int CountZoneRoomsExits;
+    [SerializeField] protected int CountZoneRoomsExits;
 
     public Dictionary<Vector3, RoomData> _spawnedRooms = new();
 
@@ -34,8 +33,6 @@ public class SpawnRoomManager : MonoBehaviour
     {
         _roomsPool = GetComponent<RoomsPool>();
         _startPosition = Vector3.up * GameEnums._roomSize;
-        // -1 тк DeadEndZoneType не имеет важных комнат
-        countImportantZoneRooms = new int[_roomsPool.GetCountPools - 1];
     }
 
     private int GetStartingZoneIndex(bool random = false) {
@@ -51,9 +48,10 @@ public class SpawnRoomManager : MonoBehaviour
         if (!random) return GameEnums._startFloor;
         
         var zoneFloorData = GameEnums.GetZoneFloorData;
-        if (random || zoneIndex != 0)
+        if (!random && zoneIndex == 0)
+            return GameEnums._startFloor;
+        else
         {
-            // !!! баг !!! Нужно сделать так, что если zoneIndex != 0 но не random, то нужно использовать бд о этажах и зонах
             int[] matchingFloors = GameEnums.GetZoneFloorData
                 .Where(pair => pair.y == zoneIndex)
                 .Select(pair => pair.x)
@@ -61,7 +59,6 @@ public class SpawnRoomManager : MonoBehaviour
 
             return matchingFloors[Random.Range(0, matchingFloors.Length)];
         }
-        else return GameEnums._startFloor;
     }
 
     private Vector3 GetStartingPosition(int numFloor) {
@@ -88,6 +85,7 @@ public class SpawnRoomManager : MonoBehaviour
         );
 
         UpdateRoomExits(direction, room);
+        UpdateAvailableExitsCount(room.GetComponent<RoomManager>(), startWorldPos);
     }
 
     // возможно изменить код RotateExitsClockwise, переписывает переменную 1 - 4 раза
@@ -142,37 +140,42 @@ public class SpawnRoomManager : MonoBehaviour
         var roomManager = room.GetComponent<RoomManager>();
 
         UsingRoom(roomManager, isUsed);
-
-        UpdateAvailableExitsCount(roomManager.exitsFromRoom);
     }
 
     protected void UsingRoom(RoomManager roomManager, bool isUsed) {
         if (!roomManager.isUsed) {
             roomManager.isUsed = isUsed;
-            if (!roomManager.AvailableForNextPoolRooms.Last()) {
-                // roomManager.isUsed = isUsed;
-                countImportantZoneRooms[roomManager.zoneType] -= 1;
+            if (roomManager.IsImportantRoom) {
+                _roomsPool.SubtractCountImportantRoomInZone(roomManager.zoneType);
             }
         }
-        
-        // if (!roomManager.isUsed && roomManager.IsImportantRoom) {
-        //     roomManager.isUsed = true;
-        //     countImportantZoneRooms[roomManager.zoneType] -= 1;
-        // }
     }
 
-    protected void UpdateAvailableExitsCount(bool[] exits, bool isStartRoom = false) {
-        // Базовое количество добавляемых выходов (4 для стартовой комнаты, 3 для обычной)
-        int baseExitsToAdd = isStartRoom
-            ? GameEnums.XOZDirectionsCount 
-            : GameEnums.XOZDirectionsCount - 1;
-        
-        // Подсчет стен без выходов
-        int wallsWithoutExits = 0;
-        foreach (var exit in exits) {if (!exit) {wallsWithoutExits++;}}
-        
-        // Обновление общего количества доступных выходов в зоне
-        CountZoneRoomsExits += baseExitsToAdd - wallsWithoutExits;
+    protected void UpdateAvailableExitsCount(RoomManager roomManager, Vector3 worldPos, bool isStartRoom = false)
+    {
+        bool[] exits = roomManager.exitsFromRoom;
+        bool isDeadEndRoom = roomManager.zoneType == GameEnums.DeadEndZoneType;
+        for (int i = 0; i < GameEnums.XOZDirectionsCount; i++)
+        {
+            if (!exits[i])
+            {
+                continue;
+            }
+
+            var (isRoomFind, _roomData) = TryGetRoomData(GetAdjacentPosition(worldPos, (GameEnums.Direction)i));
+            if (!isDeadEndRoom)
+            {
+                if (isRoomFind)
+                    CountZoneRoomsExits -= 1;
+                else
+                    CountZoneRoomsExits += 1;
+            }
+            else
+            {
+                if (isRoomFind)
+                    CountZoneRoomsExits -= 1;
+            }
+        }
     }
 
     private List<GameObject> FilterStartingRooms(List<GameObject> rooms) {
@@ -235,22 +238,74 @@ public class SpawnRoomManager : MonoBehaviour
         if (!room.TryGetComponent(out TransitionRoomManager _transitionManager))
             return;
 
-        var spawnNewZoneManager = GetComponent<SpawnNewZoneManager>();
-        var (success, newZoneRoomData) = spawnNewZoneManager.TryToGenerateNewZone(room, spawnNewZoneManager.playerController.PlayerPos);
-
-        if (!success)
-            ReplaceWithDeadEnd(room);
-        else
+        if (_roomsPool.LinearTransitionalTypes.Contains(_transitionManager.TypeTransitionRoom)) {
+            TrySpawnLinearTransitionalRoom(room);
+        } else if (_roomsPool.LiftTransitionalTypes.Contains(_transitionManager.TypeTransitionRoom)) {
+            TrySpawnLiftTransitionalRoom(room);
+        } else if (_roomsPool.LadderTransitionalTypes.Contains(_transitionManager.TypeTransitionRoom)) {
+            TrySpawnLadderTransitionalRoom(room);
+        }
+    }
+    
+    private void TrySpawnLinearTransitionalRoom(GameObject room) {
+        var spawnNewZoneManager = GetComponent<LinearTransitionSpawnZoneManager>();
+        var (isNewZoneGenerated, newZoneRoomData) = spawnNewZoneManager.TryToGenerateNewZone(room, spawnNewZoneManager.playerController.PlayerPos);
+        if (isNewZoneGenerated)
+        {
             AddingDataToSpawnedRoom(newZoneRoomData);
+        }
+        else
+        {
+            ReplaceWithDeadEnd(room, newZoneRoomData);
+        }
     }
 
-    private void AddingDataToSpawnedRoom(Dictionary<Vector3, RoomData> newZoneRoomData) {
-        foreach (var pair in newZoneRoomData) {
+    // Без модификаций, на этаже имеется всего одна переходная комната типа "Lift" и "Ladder"
+    // Уникальная механика переходной комнаты типа "Lift": если комнату заспавнить до нужного этажа не получается, 
+    // то комната НЕ заменяется на deadEndRoom. 
+    // Комната становится комнатой телепортом в другую сцену которая хранит информацию о другой зоне.
+    private void TrySpawnLiftTransitionalRoom(GameObject room)
+    {
+        // var (isNewZoneGenerated, newZoneRoomData) = GetComponent<NotLinearTransitionSpawnZoneManager>().TryToGenerateLift(room);
+        // if (isNewZoneGenerated)
+        // {
+        //     AddAllDatasToSpawnedRoom(newZoneRoomData);
+        // }
+        // else
+        // {
+        //     GenNewZoneInNewScene(room);
+        // }
+    }
+
+    // 1 лестница ведёт до -2 и -3 этажа
+    // Без модификаций, на этаже имеется всего одна переходная комната типа "Lift" и "Ladder"
+    private void TrySpawnLadderTransitionalRoom(GameObject room)
+    {
+        // var (isNewZoneGenerated, newZoneRoomData) = GetComponent<NotLinearTransitionSpawnZoneManager>().TryToGenerateLadder(room);
+        // if (isNewZoneGenerated)
+        // {
+        //     AddAllDatasToSpawnedRoom(newZoneRoomData);
+        // }
+        // else
+        // {
+        //     GenNewZoneInNewScene(room);
+        // }
+    }
+
+    private void AddingDataToSpawnedRoom(Dictionary<Vector3, RoomData> newZoneRoomData)
+    {
+        foreach (var pair in newZoneRoomData)
+        {
             _spawnedRooms.Add(pair.Key, pair.Value);
         }
     }
 
-    private void ReplaceWithDeadEnd(GameObject room) {
+    private void ReplaceWithDeadEnd(GameObject room, Dictionary<Vector3, RoomData> newZoneRoomData) {
+        foreach (var pair in newZoneRoomData)
+        {
+            pair.Value.RoomObject.GetComponent<RoomManager>().isUsed = false;
+        }
+
         var _transitionManager = room.GetComponent<TransitionRoomManager>();
         var deadEndRoomWorldPos = room.transform.position;
         _spawnedRooms.Remove(deadEndRoomWorldPos);
@@ -270,11 +325,11 @@ public class SpawnRoomManager : MonoBehaviour
     protected virtual GameObject CreateAdjacentRoomFromPool(Vector3 worldPos, int zoneType) {
         var minNumExits = CalculateMinNumRequiredExits(zoneType);
         var requiredExits = CheckRequiredRoomType(worldPos);
-        var availableRooms = FilterRoomsPoolByExits(zoneType, requiredExits, minNumExits);
+        var availableRooms = FilterRoomsPoolByExits(zoneType, worldPos.y / 25, requiredExits, minNumExits);
 
         if (availableRooms.Count == 0)
         {
-            availableRooms = FilterRoomsPoolByExits(GameEnums.DeadEndZoneType, new int[GameEnums.XOZDirectionsCount], minNumExits);
+            availableRooms = FilterRoomsPoolByExits(GameEnums.DeadEndZoneType, worldPos.y / 25, new int[GameEnums.XOZDirectionsCount], minNumExits);
         }
 
         var selectedRoom = availableRooms.GetRandom();
@@ -284,13 +339,9 @@ public class SpawnRoomManager : MonoBehaviour
         if (room == null) return null;
 
         UpdateRoomExits(direction, room);
-
+        UpdateAvailableExitsCount(room.GetComponent<RoomManager>(), worldPos);
         return room;
     }
-
-    // protected GameObject GetRandomRoomFromPool(List<GameObject> availableRooms) {
-    //     return availableRooms[Random.Range(0, availableRooms.Count)];
-    // }
 
     protected (Quaternion, int) CalculateRequiredRotationAndDirection(GameObject room, int[] requiredRoomType) {
         var roomManager = room.GetComponent<RoomManager>();
@@ -321,8 +372,7 @@ public class SpawnRoomManager : MonoBehaviour
         return validRotations;
     }
 
-    // !!! имеется баг !!! почему то имеет возможность в новой зоне заспавнить одну и ту же DeadEndRoom
-    private List<GameObject> FilterRoomsPoolByExits(int zoneIndex, int[] requiredExits, int minNumExits)
+    private List<GameObject> FilterRoomsPoolByExits(int zoneIndex, float numFloor, int[] requiredExits, int minNumExits)
     {
         var roomsPool = _roomsPool.GetPoolRooms(zoneIndex);
         var availableRoomsPool = new List<GameObject>();
@@ -333,6 +383,13 @@ public class SpawnRoomManager : MonoBehaviour
             if (roomManager.isUsed)
             {
                 continue;
+            }
+            if (room.TryGetComponent(out TransitionRoomManager transRoomManager))
+            {
+                if (transRoomManager.GetNumFloor != numFloor)
+                {
+                    continue;
+                }
             }
 
             if (zoneIndex == GameEnums.DeadEndZoneType || CheckRoomCompatibility(room, requiredExits, minNumExits))
@@ -448,7 +505,7 @@ public class SpawnRoomManager : MonoBehaviour
     protected int CalculateMinNumRequiredExits(int zoneType) {
         if (zoneType == -1)
             return 1;
-        return (CountZoneRoomsExits > 1 || countImportantZoneRooms[zoneType] < 2) ? 1 : 2;
+        return (CountZoneRoomsExits > 1 || _roomsPool.GetCountImportantRoomInZone(zoneType) < 2) ? 1 : 2;
     }
 
     private bool RoomExists(Vector3 worldPos) {

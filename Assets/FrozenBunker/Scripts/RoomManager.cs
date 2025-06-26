@@ -35,10 +35,8 @@ public class RoomManager : MonoBehaviour
         {
             PlayerController playerController = other.GetComponent<PlayerController>();
             var worldPos = gameObject.GetComponent<Transform>().position;
-            // spawnRoomManager.DespawnOldAdjacentRooms(playerController.PlayerPos, _2DWorldPos);
-            // playerController.PlayerPos = _2DWorldPos;
 
-            if (!gameObject.TryGetComponent<DeadEndRoomManager>(out DeadEndRoomManager _component))
+            if (!gameObject.TryGetComponent(out DeadEndRoomManager _component))
             {
                 spawnRoomManager.DespawnOldAdjacentRooms(playerController.PlayerPos, worldPos);
                 spawnRoomManager.SpawnAdjacentRooms(gameObject);

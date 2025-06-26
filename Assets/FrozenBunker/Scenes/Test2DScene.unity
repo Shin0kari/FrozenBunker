@@ -1473,10 +1473,10 @@ Rigidbody:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 215859623}
-  serializedVersion: 4
+  serializedVersion: 5
   m_Mass: 1
-  m_Drag: 0
-  m_AngularDrag: 0.05
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
@@ -1505,7 +1505,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 11ae3a009b4f1ad43b44227d490cda4c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  playerPos: {x: 0, y: 0}
+  playerPos: {x: 0, y: 0, z: 0}
 --- !u!4 &219434540 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2601544255839034428, guid: e6f631f77a7756d4fa49b1f543953b0f, type: 3}
@@ -6770,9 +6770,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _gameRuleManager: {fileID: 395934302}
-  _totalZones: 10
   _startPosition: {x: 0, y: 0, z: 0}
-  countImportantZoneRooms: 00000000000000000000000000000000000000000000000000000000000000000000000000000000
+  CountZoneRoomsExits: 0
 --- !u!4 &1026981675
 Transform:
   m_ObjectHideFlags: 0
@@ -6825,6 +6824,22 @@ MonoBehaviour:
   poolMedicalAreaRooms: []
   poolHeatingAreaRooms: []
   poolDeadEndRooms: []
+  countPools: 0
+  countImportantZoneRooms: 
+  linearTransitionalType: 00000000
+  liftTransitionalType: 01000000
+  ladderTransitionalType: 02000000
+  newZoneMaterials:
+  - {fileID: 2100000, guid: 7fee1451c75ad58499cdea7f4acfb560, type: 2}
+  - {fileID: 2100000, guid: 760e11a2e9347444d8427ef53c82ac37, type: 2}
+  - {fileID: 2100000, guid: ca57a07eede371040ab9685cc2515ede, type: 2}
+  - {fileID: 2100000, guid: 01d1b58001bf70744a42df607419e31d, type: 2}
+  - {fileID: 2100000, guid: 85271bfd7a1e74944a4ba5d459ea11d6, type: 2}
+  - {fileID: 2100000, guid: 65aff13ef9d4edd4d8f2356c792fc852, type: 2}
+  - {fileID: 2100000, guid: 2d0b8cd6f7418f84f8105aba33e3264c, type: 2}
+  - {fileID: 2100000, guid: cf4a24d1f86dc9646b883ab0eefcbc06, type: 2}
+  - {fileID: 2100000, guid: 16d0a619b1f40894da52afdf25a1eafc, type: 2}
+  - {fileID: 2100000, guid: e9e38dc02bf03284b819d3006eaa4964, type: 2}
 --- !u!114 &1026981677
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6834,13 +6849,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 1026981673}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7abfa04cc1b0d8e42b9170d750699fc3, type: 3}
+  m_Script: {fileID: 11500000, guid: 5b3578ece55a8594c96d47c6e5803ff3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _gameRuleManager: {fileID: 395934302}
-  _totalZones: 10
+  _gameRuleManager: {fileID: 0}
   _startPosition: {x: 0, y: 0, z: 0}
-  countImportantZoneRooms: 00000000000000000000000000000000000000000000000000000000000000000000000000000000
+  CountZoneRoomsExits: 0
   playerController: {fileID: 215859629}
 --- !u!1001 &1028037310
 PrefabInstance:

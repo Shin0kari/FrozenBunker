@@ -289,12 +289,13 @@ MonoBehaviour:
   isImportantRoom: 1
   isRoomTransitional: 1
   availableForNextPoolRooms: 0100000000000000000000
-  worldPos2D: {x: 0, y: 0}
   zoneType: 0
   exitsFromRoom: 01000100
   canUsedInfinitely: 0
   isUsed: 0
   transitionToZone: 3
+  numFloor: -1
+  transitionType: 0
 --- !u!1 &8053228674742563476
 GameObject:
   m_ObjectHideFlags: 0

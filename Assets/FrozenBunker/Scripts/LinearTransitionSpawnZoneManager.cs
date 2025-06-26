@@ -4,10 +4,14 @@ using UnityEngine;
 
 // INHERITANCE
 [RequireComponent(typeof(SpawnRoomManager))]
-public class SpawnNewZoneManager : SpawnRoomManager
+public class LinearTransitionSpawnZoneManager : SpawnRoomManager
 {
     private int countStartedImportantRooms;
     private Dictionary<Vector3, RoomData> _generalSpawnedRooms;
+    // deadEndRoomsUpdater - список deadEndRoom использованых комнат при генерпии LinearTransitionSpawnZone
+    // deadEndRoomsUpdater проверяет, не использована в соседних комнатах выбранная deadEndRoom
+    // Т.е., если мы хотим заспавнить deadEndRoom, то мы проверяем, нет ли в словаре по координатам соседних комнат
+    // данной deadEndRoom. Если нет, то мы заносим новое положение комнаты в deadEndRoomsUpdater.
     private Dictionary<Vector3, GameObject> deadEndRoomsUpdater;
     public PlayerController playerController; // изменить тип безопасности
 
@@ -27,29 +31,25 @@ public class SpawnNewZoneManager : SpawnRoomManager
         _generalSpawnedRooms = GetComponent<SpawnRoomManager>()._spawnedRooms;
     }
 
-    public void AddImportantRoomToCounter(int indexNewZone)
+    // !!! баг !!! Один раз получил, что в стыке между двумя разными зонами где должна была быть deadEndRoom, в зоне 0 она была, а в зоне 3 нет
+    // Т.е. заходил персонажем с той и с той стороны
+    public (bool, Dictionary<Vector3, RoomData>) TryToGenerateNewZone(GameObject transitionRoom, Vector3 oldPlayerPos)
     {
-        if (indexNewZone == 10) { return; }
-        countImportantZoneRooms[indexNewZone] += 1;
-    }
-
-    public (bool, Dictionary<Vector3, RoomData>) TryToGenerateNewZone(GameObject transitionRoom, Vector3 oldPlayerPos) {
         InitializingData();
 
-        countStartedImportantRooms = 
-            countImportantZoneRooms[transitionRoom.GetComponent<TransitionRoomManager>().TransitionToZone]; // new
+        countStartedImportantRooms =
+            _roomsPool.GetCountImportantRoomInZone(transitionRoom.GetComponent<TransitionRoomManager>().TransitionToZone); // new
         bool isNewZoneGenerated = RecursiveZoneGeneration(transitionRoom, oldPlayerPos);
 
         return (isNewZoneGenerated, _spawnedRooms);
     }
 
-    // !!! имеется баг !!! почему то имеет возможность в новой зоне заспавнить одну и ту же DeadEndRoom
     private bool RecursiveZoneGeneration(GameObject parentRoom, Vector3 oldPos)
     {
         var roomManager = parentRoom.GetComponent<RoomManager>();
         var indexNewZone = TryGetIndex(parentRoom);
 
-        if (indexNewZone == -1) { return false; }
+        if (indexNewZone == GameEnums.DeadEndZoneType) { return false; }
 
         for (int dir = 0; dir < GameEnums.XOZDirectionsCount; dir++)
         {
@@ -64,7 +64,7 @@ public class SpawnNewZoneManager : SpawnRoomManager
             ProcessRoomCreation(indexNewZone, newWorldPos, deadEndRoomsUpdater);
         }
 
-        return countStartedImportantRooms != countImportantZoneRooms[indexNewZone];
+        return countStartedImportantRooms != _roomsPool.GetCountImportantRoomInZone(indexNewZone);
     }
 
     // !!!!! нужно облегчить функцию уменьшив количество вызовол TryGetComponent
@@ -90,11 +90,11 @@ public class SpawnNewZoneManager : SpawnRoomManager
     protected override GameObject CreateAdjacentRoomFromPool(Vector3 worldPos, int zoneType) {
         var minNumExits = CalculateMinNumRequiredExits(zoneType);
         var requiredExits = CheckRequiredRoomType(worldPos, zoneType);
-        var availableRooms = FilterRoomsPoolByExits(zoneType, requiredExits, minNumExits, worldPos);
+        var availableRooms = FilterRoomsPoolByExits(zoneType, worldPos.y / 25, requiredExits, minNumExits, worldPos);
 
         if (availableRooms.Count == 0)
         {
-            availableRooms = FilterRoomsPoolByExits(GameEnums.DeadEndZoneType, new int[GameEnums.XOZDirectionsCount], minNumExits, worldPos);
+            availableRooms = FilterRoomsPoolByExits(GameEnums.DeadEndZoneType, worldPos.y / 25, new int[GameEnums.XOZDirectionsCount], minNumExits, worldPos);
         }
 
         var selectedRoom = availableRooms.GetRandom();
@@ -104,17 +104,24 @@ public class SpawnNewZoneManager : SpawnRoomManager
         if (room == null) return null;
 
         UpdateRoomExits(direction, room);
-
+        UpdateAvailableExitsCount(room.GetComponent<RoomManager>(), worldPos);
         return room;
     }
 
-    private List<GameObject> FilterRoomsPoolByExits(int zoneIndex, int[] requiredExits, int minNumExits, Vector3 worldPos)
+    private List<GameObject> FilterRoomsPoolByExits(int zoneIndex, float numFloor, int[] requiredExits, int minNumExits, Vector3 worldPos)
     {
         var roomsPool = _roomsPool.GetPoolRooms(zoneIndex);
         var availableRoomsPool = new List<GameObject>();
 
         foreach (var room in roomsPool)
         {
+            if (room.TryGetComponent(out TransitionRoomManager transRoomManager))
+            {
+                if (transRoomManager.GetNumFloor != numFloor)
+                {
+                    continue;
+                }
+            }
             var roomManager = room.GetComponent<RoomManager>();
             if (zoneIndex == GameEnums.DeadEndZoneType)
             {
@@ -193,8 +200,6 @@ public class SpawnNewZoneManager : SpawnRoomManager
 
         if (roomManager.zoneType == GameEnums.DeadEndZoneType) { isUsed = false; }
         UsingRoom(roomManager, isUsed);
-
-        UpdateAvailableExitsCount(roomManager.exitsFromRoom);
     }
 
     protected override (bool, RoomData) TryGetRoomData(Vector3 worldPos)
